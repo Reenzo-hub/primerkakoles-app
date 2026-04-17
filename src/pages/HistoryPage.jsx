@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import Header from '../components/Header.jsx'
+import Layout from '../components/Layout.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { supabase } from '../lib/supabase.js'
 
@@ -53,10 +53,11 @@ export default function HistoryPage() {
   if (!user) return <Navigate to="/" replace />
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <Header />
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        <h1 className="mb-6 text-2xl font-bold sm:text-3xl">История примерок</h1>
+    <Layout>
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <h1 className="mb-6 bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
+          История примерок
+        </h1>
 
         {loading && <p className="text-sm text-neutral-400">Загрузка...</p>}
         {error && (
@@ -73,7 +74,7 @@ export default function HistoryPage() {
             <button
               key={item.id}
               onClick={() => setPreview(item.result_url)}
-              className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] text-left transition hover:border-white/20"
+              className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left backdrop-blur transition hover:border-white/20"
             >
               {item.result_url ? (
                 <img
@@ -90,7 +91,7 @@ export default function HistoryPage() {
             </button>
           ))}
         </div>
-      </main>
+      </div>
 
       {preview && (
         <div
@@ -100,11 +101,7 @@ export default function HistoryPage() {
           <img src={preview} alt="full" className="max-h-[90vh] max-w-full rounded-xl" />
         </div>
       )}
-
-      <footer className="mx-auto max-w-5xl px-6 py-8 text-center text-xs text-neutral-500">
-        © 2025 Примерка Колёс
-      </footer>
-    </div>
+    </Layout>
   )
 }
 

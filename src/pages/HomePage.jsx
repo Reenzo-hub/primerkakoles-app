@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import Header from '../components/Header.jsx'
+import { Link } from 'react-router-dom'
+import Layout from '../components/Layout.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
 import GenerationResult from '../components/GenerationResult.jsx'
 import TelegramLogin from '../components/TelegramLogin.jsx'
@@ -95,32 +96,53 @@ export default function HomePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-white">
-        <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-6 py-12 text-center">
-          <h1 className="mb-3 text-4xl font-black tracking-tight sm:text-5xl">Примерка Колёс</h1>
-          <p className="mb-10 text-neutral-400">
+      <Layout
+        showAuthBar={false}
+        headerRight={
+          <a
+            href="https://t.me/primerkakoles_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden text-sm font-medium text-neutral-300 transition hover:text-white sm:inline"
+          >
+            Telegram-бот →
+          </a>
+        }
+      >
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-neutral-300 backdrop-blur">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
+            </span>
+            Запуск уже близко
+          </div>
+
+          <h1 className="mb-4 bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-7xl">
+            Примерка Колёс
+          </h1>
+
+          <p className="mb-10 max-w-xl text-base text-neutral-400 sm:text-lg">
             Виртуальная примерка дисков на ваш автомобиль
           </p>
 
-          <div className="w-full rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur">
             <h2 className="mb-4 text-lg font-semibold">Войдите, чтобы начать</h2>
             <TelegramLogin />
             <div className="mt-6 border-t border-white/10 pt-4 text-xs text-neutral-500">
               или войти по email (скоро)
             </div>
           </div>
-          <footer className="mt-10 text-xs text-neutral-500">© 2025 Примерка Колёс</footer>
         </div>
-      </div>
+      </Layout>
     )
   }
 
   const outOfBalance = (user.generations_left ?? 0) <= 0
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white">
-      <Header />
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <Layout>
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {resultUrl ? (
           <GenerationResult
             url={resultUrl}
@@ -129,9 +151,11 @@ export default function HomePage() {
           />
         ) : (
           <>
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold sm:text-3xl">Загрузите фото</h1>
-              <p className="mt-1 text-sm text-neutral-400">
+            <div className="mb-8 text-center sm:text-left">
+              <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
+                Загрузите фото
+              </h1>
+              <p className="mt-2 text-sm text-neutral-400 sm:text-base">
                 Авто и диск — мы примерим их друг к другу
               </p>
             </div>
@@ -152,7 +176,7 @@ export default function HomePage() {
             </div>
 
             {generating && (
-              <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+              <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur">
                 <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
                 <span className="text-sm text-neutral-300">
                   Генерация... ~30–60 секунд
@@ -166,26 +190,32 @@ export default function HomePage() {
               </div>
             )}
 
-            <div className="mt-8 flex flex-col items-center gap-3">
+            <div className="mt-10 flex flex-col items-center gap-3">
               <button
                 onClick={handleGenerate}
                 disabled={!canGenerate}
-                className="w-full max-w-xs rounded-full bg-orange-500 px-8 py-4 text-base font-semibold text-white shadow-[0_0_40px_rgba(249,115,22,0.35)] transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500 disabled:shadow-none sm:text-lg"
+                className="group inline-flex w-full max-w-xs items-center justify-center gap-3 rounded-full bg-white px-8 py-4 text-base font-semibold text-neutral-950 shadow-[0_0_40px_rgba(255,255,255,0.15)] transition hover:bg-orange-500 hover:text-white hover:shadow-[0_0_60px_rgba(249,115,22,0.45)] disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500 disabled:shadow-none sm:text-lg"
               >
                 {generating ? 'Генерация...' : 'Примерить'}
+                {!generating && (
+                  <span className="transition group-hover:translate-x-1">→</span>
+                )}
               </button>
               {outOfBalance && (
                 <p className="text-sm text-neutral-400">
                   Купите генерации чтобы продолжить
                 </p>
               )}
+              <Link
+                to="/history"
+                className="mt-2 text-xs text-neutral-500 underline-offset-4 transition hover:text-neutral-300 hover:underline"
+              >
+                Посмотреть мою историю →
+              </Link>
             </div>
           </>
         )}
-      </main>
-      <footer className="mx-auto max-w-5xl px-6 py-8 text-center text-xs text-neutral-500">
-        © 2025 Примерка Колёс
-      </footer>
-    </div>
+      </div>
+    </Layout>
   )
 }

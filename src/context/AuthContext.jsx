@@ -47,6 +47,11 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  const loginAsDev = useCallback((userData) => {
+    setUser(userData)
+    return userData
+  }, [])
+
   const logout = useCallback(() => {
     setUser(null)
   }, [])
@@ -71,8 +76,26 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading, error, loginWithTelegram, logout, refreshBalance, decrementBalance }),
-    [user, loading, error, loginWithTelegram, logout, refreshBalance, decrementBalance],
+    () => ({
+      user,
+      loading,
+      error,
+      loginWithTelegram,
+      loginAsDev,
+      logout,
+      refreshBalance,
+      decrementBalance,
+    }),
+    [
+      user,
+      loading,
+      error,
+      loginWithTelegram,
+      loginAsDev,
+      logout,
+      refreshBalance,
+      decrementBalance,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
