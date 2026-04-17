@@ -1,5 +1,20 @@
-import ComingSoon from './pages/ComingSoon.jsx'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext.jsx'
+import HomePage from './pages/HomePage.jsx'
+import HistoryPage from './pages/HistoryPage.jsx'
+import AdminPage from './pages/AdminPage.jsx'
 
 export default function App() {
-  return <ComingSoon />
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  )
 }
