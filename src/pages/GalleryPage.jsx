@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import Layout from '../components/Layout.jsx'
 import { supabase } from '../lib/supabase.js'
 
-const PAGE_SIZE = 60
+const BUCKET = 'Generations'
+const FOLDER = 'web'
+const PAGE_SIZE = 200
 
 export default function GalleryPage() {
   const [items, setItems] = useState([])
@@ -15,16 +17,21 @@ export default function GalleryPage() {
     ;(async () => {
       setLoading(true)
       setError(null)
-      const { data, error: err } = await supabase
-        .from('generations')
-        .select('id, car_url, wheel_url, result_url, source, created_at')
-        .not('result_url', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(PAGE_SIZE)
+      const { data, error: err } = await supabase.storage
+        .from(BUCKET)
+        .list(FOLDER, {
+          limit: PAGE_SIZE,
+          sortBy: { column: 'created_at', order: 'desc' },
+        })
 
       if (cancelled) return
-      if (err) setError(err.message)
-      setItems(data || [])
+      if (err) {
+        setError(err.message)
+        setLoading(false)
+        return
+      }
+
+      setItems(groupByTimestamp(data || []))
       setLoading(false)
     })()
     return () => {
@@ -69,14 +76,8 @@ export default function GalleryPage() {
               />
               <div className="flex items-center justify-between p-3 text-xs text-neutral-400">
                 <span>{formatDate(item.created_at)}</span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                    item.source === 'web'
-                      ? 'bg-sky-500/15 text-sky-300'
-                      : 'bg-emerald-500/15 text-emerald-300'
-                  }`}
-                >
-                  {item.source || 'web'}
+                <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-sky-300">
+                  web
                 </span>
               </div>
             </button>
@@ -123,6 +124,33 @@ export default function GalleryPage() {
       )}
     </Layout>
   )
+}
+
+function groupByTimestamp(files) {
+  const groups = new Map()
+
+  for (const f of files) {
+    const match = f.name.match(/^(\d+)_(car|wheel|result)\.(jpg|jpeg|png|webp)$/i)
+    if (!match) continue
+    const [, ts, kind] = match
+
+    if (!groups.has(ts)) {
+      groups.set(ts, { id: ts, created_at: f.created_at || null })
+    }
+    const entry = groups.get(ts)
+    entry[`${kind.toLowerCase()}_url`] = publicUrl(f.name)
+
+    if (!entry.created_at && f.created_at) entry.created_at = f.created_at
+  }
+
+  return Array.from(groups.values())
+    .filter((g) => g.result_url)
+    .sort((a, b) => Number(b.id) - Number(a.id))
+}
+
+function publicUrl(name) {
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${FOLDER}/${name}`)
+  return data?.publicUrl || ''
 }
 
 function formatDate(iso) {
