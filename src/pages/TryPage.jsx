@@ -3,13 +3,18 @@ import Layout from '../components/Layout.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
 import GenerationResult from '../components/GenerationResult.jsx'
 
-const GENERATE_WEBHOOK_URL = import.meta.env.VITE_GENERATE_WEBHOOK_URL
+const WEBHOOK_URL =
+  import.meta.env.VITE_WEBHOOK_URL ||
+  'https://mentera.app.n8n.cloud/webhook/2e3b951c-0ff7-4edb-9255-5376d129bb9d'
+
+const TIMEOUT_MS = 120_000
 
 const fileToBase64 = (file) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
       const raw = reader.result
+      // strip "data:image/jpeg;base64," prefix
       const base64 = typeof raw === 'string' ? raw.split(',')[1] : ''
       resolve(base64)
     }
@@ -43,17 +48,25 @@ export default function TryPage() {
         fileToBase64(wheelPhoto.file),
       ])
 
-      const res = await fetch(GENERATE_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          car_base64,
-          wheel_base64,
-          car_mime: carPhoto.file.type,
-          wheel_mime: wheelPhoto.file.type,
-          source: 'web',
-        }),
-      })
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+
+      let res
+      try {
+        res = await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            car_base64,
+            wheel_base64,
+            car_mime: carPhoto.file.type,
+            wheel_mime: wheelPhoto.file.type,
+          }),
+        })
+      } finally {
+        clearTimeout(timer)
+      }
 
       if (!res.ok) throw new Error(`Ошибка генерации: ${res.status}`)
 
@@ -65,7 +78,11 @@ export default function TryPage() {
       const url = URL.createObjectURL(blob)
       setResultUrl(url)
     } catch (e) {
-      setErrorMsg(e.message || 'Что-то пошло не так')
+      if (e.name === 'AbortError') {
+        setErrorMsg('Превышено время ожидания (120 сек). Попробуйте ещё раз.')
+      } else {
+        setErrorMsg(e.message || 'Что-то пошло не так')
+      }
     } finally {
       setGenerating(false)
     }
