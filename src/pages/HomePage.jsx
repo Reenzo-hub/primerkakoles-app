@@ -1,7 +1,13 @@
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
+import { useSeo } from '../lib/useSeo.js'
 
 export default function HomePage() {
+  useSeo({
+    title: 'Примерить диски онлайн с помощью искусственного интеллекта',
+    description:
+      'Виртуальная примерка дисков на ваш автомобиль с помощью ИИ. Загрузите фото машины и фото диска — получите результат за минуту. Бесплатно, без регистрации и установки.',
+  })
   return (
     <Layout>
       <div className="flex flex-col items-center justify-center px-6 py-12 text-center">

@@ -1,14 +1,28 @@
 import { useEffect, useState } from 'react'
 import Layout from '../components/Layout.jsx'
 import { supabase } from '../lib/supabase.js'
+import { useSeo } from '../lib/useSeo.js'
 
 const PAGE_SIZE = 60
 
+const VIEW_LABELS = {
+  result: 'Результат',
+  car: 'Авто',
+  wheel: 'Диск',
+}
+
 export default function GalleryPage() {
+  useSeo({
+    title: 'Примеры примерки дисков — галерея готовых работ · Примерка Колёс',
+    description:
+      'Галерея примерок дисков на разных автомобилях. Посмотрите, как выглядят популярные модели колёс на реальных машинах — и подберите свой вариант.',
+  })
+
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [preview, setPreview] = useState(null)
+  const [view, setView] = useState('result')
 
   useEffect(() => {
     let cancelled = false
@@ -31,6 +45,27 @@ export default function GalleryPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!preview) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') closePreview()
+    }
+    window.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = ''
+    }
+  }, [preview])
+
+  const openPreview = (item) => {
+    setView('result')
+    setPreview(item)
+  }
+  const closePreview = () => setPreview(null)
+
+  const activeUrl = preview ? preview[`${view}_url`] : null
 
   return (
     <Layout>
@@ -58,7 +93,7 @@ export default function GalleryPage() {
           {items.map((item) => (
             <button
               key={item.id}
-              onClick={() => setPreview(item)}
+              onClick={() => openPreview(item)}
               className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left backdrop-blur transition hover:border-white/25"
             >
               <img
@@ -86,37 +121,59 @@ export default function GalleryPage() {
 
       {preview && (
         <div
-          onClick={() => setPreview(null)}
+          onClick={closePreview}
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/90 p-4"
         >
-          <img
-            src={preview.result_url}
-            alt="full"
-            className="max-h-[80vh] max-w-full rounded-xl"
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              closePreview()
+            }}
+            aria-label="Закрыть"
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+
+          {activeUrl && (
+            <img
+              src={activeUrl}
+              alt={VIEW_LABELS[view]}
+              className="max-h-[78vh] max-w-full rounded-xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+
+          <div
+            className="flex gap-2 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur"
             onClick={(e) => e.stopPropagation()}
-          />
-          <div className="flex gap-3 text-xs text-neutral-300">
-            {preview.car_url && (
-              <a
-                href={preview.car_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 hover:bg-white/10"
-              >
-                Авто
-              </a>
-            )}
-            {preview.wheel_url && (
-              <a
-                href={preview.wheel_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 hover:bg-white/10"
-              >
-                Диск
-              </a>
+          >
+            {['result', 'car', 'wheel'].map((key) =>
+              preview[`${key}_url`] ? (
+                <button
+                  key={key}
+                  onClick={() => setView(key)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                    view === key
+                      ? 'bg-white text-neutral-950'
+                      : 'text-neutral-300 hover:bg-white/10'
+                  }`}
+                >
+                  {VIEW_LABELS[key]}
+                </button>
+              ) : null,
             )}
           </div>
         </div>

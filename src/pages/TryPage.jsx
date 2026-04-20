@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Layout from '../components/Layout.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
 import GenerationResult from '../components/GenerationResult.jsx'
+import { useSeo } from '../lib/useSeo.js'
 
 const WEBHOOK_URL =
   import.meta.env.VITE_WEBHOOK_URL ||
@@ -23,6 +24,12 @@ const fileToBase64 = (file) =>
   })
 
 export default function TryPage() {
+  useSeo({
+    title: 'Примерить диски онлайн — загрузите фото авто и диска · Примерка Колёс',
+    description:
+      'Загрузите фото вашего автомобиля и понравившегося диска — искусственный интеллект покажет, как они будут смотреться вместе. Генерация занимает 30–60 секунд.',
+  })
+
   const [carPhoto, setCarPhoto] = useState(null)
   const [wheelPhoto, setWheelPhoto] = useState(null)
   const [resultUrl, setResultUrl] = useState(null)

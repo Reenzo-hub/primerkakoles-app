@@ -43,7 +43,7 @@ export default function Layout({ children }) {
         <main className="flex-1">{children}</main>
 
         <footer className="px-6 py-6 text-center text-xs text-neutral-500 sm:px-10">
-          © 2025 Примерка Колёс
+          © 2026 Примерка Колёс
         </footer>
       </div>
     </div>
