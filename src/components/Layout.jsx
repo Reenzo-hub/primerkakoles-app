@@ -1,6 +1,8 @@
 import { NavLink, Link } from 'react-router-dom'
+import { useAuth } from '../lib/useAuth.js'
 
 export default function Layout({ children }) {
+  const { user } = useAuth()
   return (
     <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -29,6 +31,11 @@ export default function Layout({ children }) {
           <nav className="flex flex-wrap items-center gap-1 text-sm sm:gap-2">
             <NavItem to="/try">Примерить диски</NavItem>
             <NavItem to="/gallery">Примеры</NavItem>
+            {user ? (
+              <NavItem to="/cabinet">Кабинет</NavItem>
+            ) : (
+              <NavItem to="/login">Войти</NavItem>
+            )}
             <a
               href="https://t.me/primerkakoles_bot"
               target="_blank"
