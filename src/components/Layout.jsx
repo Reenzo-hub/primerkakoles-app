@@ -30,27 +30,62 @@ export default function Layout({ children }) {
 
           <nav className="flex flex-wrap items-center gap-1 text-sm sm:gap-2">
             <NavItem to="/try">Примерить диски</NavItem>
-            <NavItem to="/gallery">Примеры</NavItem>
+            {user && <NavItem to="/my">Мои примерки</NavItem>}
             {user ? (
               <NavItem to="/cabinet">Кабинет</NavItem>
             ) : (
               <NavItem to="/login">Войти</NavItem>
             )}
-            <a
-              href="https://t.me/primerkakoles_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden rounded-full px-3 py-1.5 text-neutral-400 transition hover:text-white sm:inline"
-            >
-              Telegram-бот →
-            </a>
           </nav>
         </header>
 
         <main className="flex-1">{children}</main>
 
-        <footer className="px-6 py-6 text-center text-xs text-neutral-500 sm:px-10">
-          © 2026 Примерка Колёс
+        <footer className="border-t border-white/5 px-6 py-10 sm:px-10">
+          <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium tracking-widest text-neutral-400 uppercase">
+                <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
+                primerkakoles
+              </div>
+              <p className="mt-3 text-xs text-neutral-500">
+                Виртуальная примерка дисков на ваш автомобиль.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Навигация
+              </h3>
+              <ul className="mt-3 flex flex-col gap-2 text-sm">
+                <FooterLink to="/try">Примерить диски</FooterLink>
+                <FooterLink to="/gallery">Примеры</FooterLink>
+                {user && <FooterLink to="/my">Мои примерки</FooterLink>}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                Контакты
+              </h3>
+              <ul className="mt-3 flex flex-col gap-2 text-sm">
+                <li>
+                  <a
+                    href="https://t.me/primerkakoles_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-neutral-300 transition hover:text-white"
+                  >
+                    Telegram-бот →
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mx-auto mt-10 max-w-6xl border-t border-white/5 pt-6 text-center text-xs text-neutral-500">
+            © 2026 Примерка Колёс
+          </div>
         </footer>
       </div>
     </div>
@@ -71,5 +106,18 @@ function NavItem({ to, children }) {
     >
       {children}
     </NavLink>
+  )
+}
+
+function FooterLink({ to, children }) {
+  return (
+    <li>
+      <NavLink
+        to={to}
+        className="text-neutral-300 transition hover:text-white"
+      >
+        {children}
+      </NavLink>
+    </li>
   )
 }

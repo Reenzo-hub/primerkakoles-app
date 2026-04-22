@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import PhotoUpload from '../components/PhotoUpload.jsx'
 import GenerationResult from '../components/GenerationResult.jsx'
+import { supabase } from '../lib/supabase.js'
+import { useAuth } from '../lib/useAuth.js'
+import { useUserProfile } from '../lib/useUserProfile.js'
 import { useSeo } from '../lib/useSeo.js'
 
-const WEBHOOK_URL =
-  import.meta.env.VITE_WEBHOOK_URL ||
-  'https://mentera.app.n8n.cloud/webhook/2e3b951c-0ff7-4edb-9255-5376d129bb9d'
+const WEBHOOK_URL = import.meta.env.VITE_WEBHOOK_URL
 
 const TIMEOUT_MS = 120_000
 
@@ -15,7 +17,6 @@ const fileToBase64 = (file) =>
     const reader = new FileReader()
     reader.onload = () => {
       const raw = reader.result
-      // strip "data:image/jpeg;base64," prefix
       const base64 = typeof raw === 'string' ? raw.split(',')[1] : ''
       resolve(base64)
     }
@@ -25,10 +26,15 @@ const fileToBase64 = (file) =>
 
 export default function TryPage() {
   useSeo({
-    title: 'Примерить диски онлайн — загрузите фото авто и диска · Примерка Колёс',
+    title:
+      'Примерить диски онлайн — загрузите фото авто и диска · Примерка Колёс',
     description:
       'Загрузите фото вашего автомобиля и понравившегося диска — искусственный интеллект покажет, как они будут смотреться вместе. Генерация занимает 30–60 секунд.',
   })
+
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
+  const { profile, refetch: refetchProfile } = useUserProfile(user)
 
   const [carPhoto, setCarPhoto] = useState(null)
   const [wheelPhoto, setWheelPhoto] = useState(null)
@@ -42,7 +48,11 @@ export default function TryPage() {
     }
   }, [resultUrl])
 
-  const canGenerate = !!carPhoto && !!wheelPhoto && !generating
+  const used = profile?.generations_used ?? 0
+  const limit = profile?.generations_limit ?? 0
+  const left = Math.max(0, limit - used)
+  const canGenerate =
+    !!carPhoto && !!wheelPhoto && !generating && !!user && left > 0
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate) return
@@ -50,6 +60,10 @@ export default function TryPage() {
     setErrorMsg(null)
     setResultUrl(null)
     try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      if (!token) throw new Error('Нет активной сессии. Войдите заново.')
+
       const [car_base64, wheel_base64] = await Promise.all([
         fileToBase64(carPhoto.file),
         fileToBase64(wheelPhoto.file),
@@ -62,7 +76,10 @@ export default function TryPage() {
       try {
         res = await fetch(WEBHOOK_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           signal: controller.signal,
           body: JSON.stringify({
             car_base64,
@@ -75,6 +92,9 @@ export default function TryPage() {
         clearTimeout(timer)
       }
 
+      if (res.status === 401) throw new Error('Сессия истекла. Войдите заново.')
+      if (res.status === 402)
+        throw new Error('Баланс генераций исчерпан. Пополните в кабинете.')
       if (!res.ok) throw new Error(`Ошибка генерации: ${res.status}`)
 
       const blob = await res.blob()
@@ -84,6 +104,7 @@ export default function TryPage() {
       }
       const url = URL.createObjectURL(blob)
       setResultUrl(url)
+      refetchProfile()
     } catch (e) {
       if (e.name === 'AbortError') {
         setErrorMsg('Превышено время ожидания (120 сек). Попробуйте ещё раз.')
@@ -93,7 +114,7 @@ export default function TryPage() {
     } finally {
       setGenerating(false)
     }
-  }, [canGenerate, carPhoto, wheelPhoto])
+  }, [canGenerate, carPhoto, wheelPhoto, refetchProfile])
 
   const tryAnotherWheel = () => {
     if (wheelPhoto?.preview) URL.revokeObjectURL(wheelPhoto.preview)
@@ -107,6 +128,39 @@ export default function TryPage() {
     setResultUrl(null)
   }
 
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur">
+            <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-2xl font-black tracking-tight text-transparent">
+              Войдите, чтобы примерить
+            </h1>
+            <p className="mt-3 text-sm text-neutral-400">
+              Регистрация через email. На старте дарим 1 бесплатную примерку.
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white"
+            >
+              Войти →
+            </button>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -118,14 +172,30 @@ export default function TryPage() {
           />
         ) : (
           <>
-            <div className="mb-8 text-center sm:text-left">
-              <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
-                Примерить диски
-              </h1>
-              <p className="mt-2 text-sm text-neutral-400 sm:text-base">
-                Загрузите фото авто и диска — мы примерим их друг к другу
-              </p>
+            <div className="mb-8 flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
+              <div>
+                <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-5xl">
+                  Примерить диски
+                </h1>
+                <p className="mt-2 text-sm text-neutral-400 sm:text-base">
+                  Загрузите фото авто и диска — мы примерим их друг к другу
+                </p>
+              </div>
+              <div className="inline-flex items-center gap-2 self-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-neutral-300 sm:self-auto">
+                Осталось генераций:{' '}
+                <span className="font-semibold text-white">{left}</span>
+                <span className="text-neutral-500">из {limit}</span>
+              </div>
             </div>
+
+            {left === 0 && (
+              <div className="mb-6 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
+                Баланс генераций исчерпан.{' '}
+                <Link to="/cabinet" className="underline hover:text-white">
+                  Пополнить в кабинете →
+                </Link>
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <PhotoUpload
@@ -165,7 +235,9 @@ export default function TryPage() {
               >
                 {generating ? 'Генерация...' : 'Примерить'}
                 {!generating && (
-                  <span className="transition group-hover:translate-x-1">→</span>
+                  <span className="transition group-hover:translate-x-1">
+                    →
+                  </span>
                 )}
               </button>
             </div>
