@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 
+const SELECT =
+  'id, email, chat_id, first_name, username, generations_limit, generations_used'
+
 export function useUserProfile(user) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -13,7 +16,7 @@ export function useUserProfile(user) {
     setLoading(true)
     const { data } = await supabase
       .from('users')
-      .select('id, email, chat_id, generations_limit, generations_used')
+      .select(SELECT)
       .eq('auth_user_id', user.id)
       .maybeSingle()
     setProfile(data)
@@ -30,7 +33,7 @@ export function useUserProfile(user) {
       setLoading(true)
       const { data } = await supabase
         .from('users')
-        .select('id, email, chat_id, generations_limit, generations_used')
+        .select(SELECT)
         .eq('auth_user_id', user.id)
         .maybeSingle()
       if (cancelled) return

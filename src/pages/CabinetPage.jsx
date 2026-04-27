@@ -38,14 +38,27 @@ export default function CabinetPage() {
   const limit = profile?.generations_limit ?? 0
   const left = Math.max(0, limit - used)
 
+  const displayName =
+    profile?.first_name ||
+    (profile?.username ? `@${profile.username}` : null) ||
+    user.email ||
+    'Профиль'
+
   return (
     <Layout>
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur">
           <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent">
-            Кабинет
+            {displayName}
           </h1>
-          <p className="mt-2 break-all text-sm text-neutral-400">{user.email}</p>
+          {user.email && (
+            <p className="mt-2 break-all text-sm text-neutral-400">
+              {user.email}
+            </p>
+          )}
+          {profile?.username && profile?.first_name && (
+            <p className="mt-1 text-sm text-neutral-500">@{profile.username}</p>
+          )}
 
           <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-5">
             <div className="text-xs uppercase tracking-wider text-neutral-500">
