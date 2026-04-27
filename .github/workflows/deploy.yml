@@ -34,7 +34,6 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_WEBHOOK_URL: ${{ secrets.VITE_WEBHOOK_URL }}
           VITE_TELEGRAM_BOT_USERNAME: ${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
-          VITE_TELEGRAM_AUTH_WEBHOOK_URL: ${{ secrets.VITE_TELEGRAM_AUTH_WEBHOOK_URL }}
 
       - name: SPA fallback (copy index.html to 404.html)
         run: cp dist/index.html dist/404.html

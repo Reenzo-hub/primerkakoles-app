@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 
 const SELECT =
-  'id, email, chat_id, first_name, username, generations_limit, generations_used'
+  'id, email, phone, chat_id, first_name, username, generations_limit, generations_used'
 
 export function useUserProfile(user) {
   const [profile, setProfile] = useState(null)

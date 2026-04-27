@@ -1,18 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/useAuth.js'
 import { useSeo } from '../lib/useSeo.js'
 
-const TG_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME
-const TG_AUTH_URL = import.meta.env.VITE_TELEGRAM_AUTH_WEBHOOK_URL
+const RESEND_DELAY_SEC = 30
 
 export default function LoginPage() {
   useSeo({
     title: 'Вход · Примерка Колёс',
     description:
-      'Войдите через Telegram или SMS, чтобы сохранять примерки и отслеживать баланс генераций.',
+      'Войдите по SMS, чтобы сохранять примерки и отслеживать баланс генераций.',
   })
 
   const navigate = useNavigate()
@@ -30,18 +29,14 @@ export default function LoginPage() {
             Вход
           </h1>
           <p className="mt-2 text-sm text-neutral-400">
-            Войдите через Telegram — самый быстрый способ.
+            Получите код по SMS — это быстрее, чем регистрация.
           </p>
-
-          <TelegramSection />
-
-          <Divider />
 
           <SmsSection />
 
           <Divider />
 
-          <EmailSection />
+          <TelegramSoon />
         </div>
       </div>
     </Layout>
@@ -58,152 +53,180 @@ function Divider() {
   )
 }
 
-function TelegramSection() {
-  const containerRef = useRef(null)
-  const [status, setStatus] = useState('idle') // idle | sending | error
+function SmsSection() {
+  const [step, setStep] = useState('phone') // phone | code
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [sending, setSending] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState(null)
+  const [resendIn, setResendIn] = useState(0)
 
   useEffect(() => {
-    if (!TG_BOT_USERNAME) return
-    if (!containerRef.current) return
+    if (resendIn <= 0) return
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
 
-    window.onTelegramAuth = async (tgUser) => {
-      setStatus('sending')
-      setError(null)
-      try {
-        const res = await fetch(TG_AUTH_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(tgUser),
-        })
-        if (!res.ok) {
-          const text = await res.text().catch(() => '')
-          throw new Error(text || `Не удалось войти через Telegram (${res.status})`)
-        }
-        const data = await res.json()
-        if (!data?.action_link) throw new Error('Сервер не вернул ссылку входа')
-        window.location.href = data.action_link
-      } catch (e) {
-        setStatus('error')
-        setError(e.message || 'Что-то пошло не так')
-      }
+  const phoneDigits = phone.replace(/\D/g, '').slice(0, 10)
+  const e164 = '+7' + phoneDigits
+  const phoneValid = phoneDigits.length === 10
+
+  const sendCode = async (e) => {
+    e?.preventDefault()
+    if (!phoneValid) return
+    setSending(true)
+    setError(null)
+    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164 })
+    setSending(false)
+    if (err) {
+      setError(err.message)
+      return
     }
+    setStep('code')
+    setResendIn(RESEND_DELAY_SEC)
+  }
 
-    const script = document.createElement('script')
-    script.src = 'https://telegram.org/js/telegram-widget.js?22'
-    script.async = true
-    script.setAttribute('data-telegram-login', TG_BOT_USERNAME)
-    script.setAttribute('data-size', 'large')
-    script.setAttribute('data-radius', '20')
-    script.setAttribute('data-onauth', 'onTelegramAuth(user)')
-    script.setAttribute('data-request-access', 'write')
-    containerRef.current.appendChild(script)
-
-    return () => {
-      delete window.onTelegramAuth
+  const verifyCode = async (e) => {
+    e?.preventDefault()
+    if (code.length !== 6) return
+    setVerifying(true)
+    setError(null)
+    const { error: err } = await supabase.auth.verifyOtp({
+      phone: e164,
+      token: code,
+      type: 'sms',
+    })
+    setVerifying(false)
+    if (err) {
+      setError(err.message)
+      return
     }
-  }, [])
+    // useAuth picks up the new session and LoginPage redirects to /cabinet.
+  }
+
+  if (step === 'code') {
+    return (
+      <form onSubmit={verifyCode} className="mt-6 flex flex-col gap-3">
+        <p className="text-sm text-neutral-300">
+          Код отправлен на{' '}
+          <span className="font-semibold text-white">+7 {formatRu(phoneDigits)}</span>
+        </p>
+
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          autoFocus
+          maxLength={6}
+          placeholder="000000"
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-center text-lg tracking-[0.5em] text-white placeholder:text-neutral-600 focus:border-white/30 focus:outline-none"
+        />
+
+        <button
+          type="submit"
+          disabled={code.length !== 6 || verifying}
+          className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
+        >
+          {verifying ? 'Проверка...' : 'Войти'}
+        </button>
+
+        <div className="flex items-center justify-between text-xs">
+          <button
+            type="button"
+            onClick={() => {
+              setStep('phone')
+              setCode('')
+              setError(null)
+            }}
+            className="text-neutral-400 transition hover:text-white"
+          >
+            ← Изменить номер
+          </button>
+          {resendIn > 0 ? (
+            <span className="text-neutral-500">
+              Повторно через {resendIn} с
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={sendCode}
+              disabled={sending}
+              className="text-neutral-300 transition hover:text-white disabled:opacity-50"
+            >
+              {sending ? 'Отправка...' : 'Отправить ещё раз'}
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+            {error}
+          </div>
+        )}
+      </form>
+    )
+  }
 
   return (
-    <div className="mt-6">
-      <div ref={containerRef} className="flex justify-center" />
-      {status === 'sending' && (
-        <div className="mt-3 flex items-center justify-center gap-2 text-xs text-neutral-400">
-          <span className="inline-block h-3 w-3 animate-spin rounded-full border border-orange-500 border-t-transparent" />
-          Проверяем данные Telegram...
-        </div>
-      )}
-      {status === 'error' && error && (
-        <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+    <form onSubmit={sendCode} className="mt-6 flex flex-col gap-3">
+      <div className="flex items-stretch gap-2">
+        <span className="flex items-center rounded-full border border-white/10 bg-white/5 px-4 text-sm text-neutral-300">
+          +7
+        </span>
+        <input
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel"
+          autoFocus
+          placeholder="999 000 00 00"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="flex-1 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-white placeholder:text-neutral-500 focus:border-white/30 focus:outline-none"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={!phoneValid || sending}
+        className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
+      >
+        {sending ? 'Отправляем код...' : 'Получить код'}
+      </button>
+
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
           {error}
         </div>
       )}
-    </div>
+    </form>
   )
 }
 
-function SmsSection() {
+function TelegramSoon() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-neutral-300">По SMS</span>
+        <span className="text-sm font-medium text-neutral-300">
+          Войти через Telegram
+        </span>
         <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300">
           Скоро
         </span>
       </div>
-      <input
-        type="tel"
-        disabled
-        placeholder="+7 999 000 00 00"
-        className="mt-3 w-full cursor-not-allowed rounded-full border border-white/5 bg-neutral-900/40 px-5 py-3 text-neutral-500 placeholder:text-neutral-600 focus:outline-none"
-      />
-      <button
-        type="button"
-        disabled
-        className="mt-3 w-full cursor-not-allowed rounded-full bg-neutral-800 px-6 py-3 text-sm font-semibold text-neutral-500"
-      >
-        Получить код
-      </button>
+      <p className="mt-2 text-xs text-neutral-500">
+        Готовим вход через бота — будет в один клик.
+      </p>
     </div>
   )
 }
 
-function EmailSection() {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState(null)
-
-  const submit = async (e) => {
-    e.preventDefault()
-    setSending(true)
-    setError(null)
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    })
-    setSending(false)
-    if (err) setError(err.message)
-    else setSent(true)
-  }
-
-  return (
-    <details className="group">
-      <summary className="cursor-pointer list-none text-xs text-neutral-500 transition hover:text-neutral-300">
-        <span className="inline-flex items-center gap-1">
-          Войти по email-ссылке
-          <span className="transition group-open:rotate-180">▾</span>
-        </span>
-      </summary>
-
-      <div className="mt-4">
-        {sent ? (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
-            Ссылка отправлена на <span className="break-all">{email}</span>. Проверьте
-            почту.
-          </div>
-        ) : (
-          <form onSubmit={submit} className="flex flex-col gap-3">
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-white placeholder:text-neutral-500 focus:border-white/30 focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={sending || !email}
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-neutral-200 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {sending ? 'Отправка...' : 'Получить ссылку'}
-            </button>
-            {error && <p className="text-sm text-red-300">{error}</p>}
-          </form>
-        )}
-      </div>
-    </details>
-  )
+function formatRu(digits) {
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`
+  if (digits.length <= 8)
+    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`
 }

@@ -38,11 +38,21 @@ export default function CabinetPage() {
   const limit = profile?.generations_limit ?? 0
   const left = Math.max(0, limit - used)
 
+  const phoneFormatted = formatPhone(profile?.phone || user.phone)
+
   const displayName =
     profile?.first_name ||
     (profile?.username ? `@${profile.username}` : null) ||
+    phoneFormatted ||
     user.email ||
     'Профиль'
+
+  const subtitle =
+    (profile?.first_name || profile?.username) && phoneFormatted
+      ? phoneFormatted
+      : user.email && displayName !== user.email
+      ? user.email
+      : null
 
   return (
     <Layout>
@@ -51,10 +61,8 @@ export default function CabinetPage() {
           <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent">
             {displayName}
           </h1>
-          {user.email && (
-            <p className="mt-2 break-all text-sm text-neutral-400">
-              {user.email}
-            </p>
+          {subtitle && (
+            <p className="mt-2 break-all text-sm text-neutral-400">{subtitle}</p>
           )}
           {profile?.username && profile?.first_name && (
             <p className="mt-1 text-sm text-neutral-500">@{profile.username}</p>
@@ -90,4 +98,14 @@ export default function CabinetPage() {
       </div>
     </Layout>
   )
+}
+
+function formatPhone(raw) {
+  if (!raw) return null
+  const digits = String(raw).replace(/\D/g, '')
+  if (digits.length === 11 && (digits.startsWith('7') || digits.startsWith('8'))) {
+    const d = '7' + digits.slice(1)
+    return `+${d.slice(0, 1)} (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7, 9)}-${d.slice(9, 11)}`
+  }
+  return raw.startsWith('+') ? raw : `+${raw}`
 }
