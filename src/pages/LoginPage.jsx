@@ -68,7 +68,7 @@ function SmsSection() {
     return () => clearTimeout(t)
   }, [resendIn])
 
-  const phoneDigits = phone.replace(/\D/g, '').slice(0, 10)
+  const phoneDigits = phone
   const e164 = '+7' + phoneDigits
   const phoneValid = phoneDigits.length === 10
 
@@ -110,7 +110,7 @@ function SmsSection() {
       <form onSubmit={verifyCode} className="mt-6 flex flex-col gap-3">
         <p className="text-sm text-neutral-300">
           Код отправлен на{' '}
-          <span className="font-semibold text-white">+7 {formatRu(phoneDigits)}</span>
+          <span className="font-semibold text-white">{formatRu(phoneDigits)}</span>
         </p>
 
         <input
@@ -172,21 +172,16 @@ function SmsSection() {
 
   return (
     <form onSubmit={sendCode} className="mt-6 flex flex-col gap-3">
-      <div className="flex items-stretch gap-2">
-        <span className="flex items-center rounded-full border border-white/10 bg-white/5 px-4 text-sm text-neutral-300">
-          +7
-        </span>
-        <input
-          type="tel"
-          inputMode="numeric"
-          autoComplete="tel"
-          autoFocus
-          placeholder="999 000 00 00"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="flex-1 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-white placeholder:text-neutral-500 focus:border-white/30 focus:outline-none"
-        />
-      </div>
+      <input
+        type="tel"
+        inputMode="numeric"
+        autoComplete="tel"
+        autoFocus
+        placeholder="+7 999 000 00 00"
+        value={formatRu(phone)}
+        onChange={(e) => setPhone(normalizeRuPhone(e.target.value))}
+        className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-3 text-white placeholder:text-neutral-500 focus:border-white/30 focus:outline-none"
+      />
 
       <button
         type="submit"
@@ -224,9 +219,18 @@ function TelegramSoon() {
 }
 
 function formatRu(digits) {
-  if (digits.length <= 3) return digits
-  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`
+  if (!digits) return ''
+  if (digits.length <= 3) return `+7 ${digits}`
+  if (digits.length <= 6) return `+7 ${digits.slice(0, 3)} ${digits.slice(3)}`
   if (digits.length <= 8)
-    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
-  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`
+    return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
+  return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`
+}
+
+function normalizeRuPhone(value) {
+  const digits = value.replace(/\D/g, '')
+  if (digits.startsWith('7') || digits.startsWith('8')) {
+    return digits.slice(1, 11)
+  }
+  return digits.slice(0, 10)
 }

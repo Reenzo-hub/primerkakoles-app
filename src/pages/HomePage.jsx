@@ -13,10 +13,10 @@ export default function HomePage() {
       <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-neutral-300 backdrop-blur">
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
-          Запуск уже близко
+          Примерка доступна
         </div>
 
         <h1 className="mb-4 bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-5xl font-black tracking-tight text-transparent sm:text-7xl md:text-8xl">

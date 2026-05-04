@@ -22,10 +22,10 @@ export default function Layout({ children }) {
         <header className="flex flex-wrap items-center justify-between gap-3 px-6 py-6 sm:px-10">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm font-medium tracking-widest text-neutral-400 uppercase transition hover:text-white"
+            className="flex items-center gap-2 text-sm font-medium tracking-widest text-neutral-400 transition hover:text-white"
           >
             <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
-            primerkakoles
+            примеркаколес
           </Link>
 
           <nav className="flex flex-wrap items-center gap-1 text-sm sm:gap-2">
@@ -44,9 +44,9 @@ export default function Layout({ children }) {
         <footer className="border-t border-white/5 px-6 py-10 sm:px-10">
           <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
             <div>
-              <div className="flex items-center gap-2 text-sm font-medium tracking-widest text-neutral-400 uppercase">
+              <div className="flex items-center gap-2 text-sm font-medium tracking-widest text-neutral-400">
                 <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
-                primerkakoles
+                примеркаколес
               </div>
               <p className="mt-3 text-xs text-neutral-500">
                 Виртуальная примерка дисков на ваш автомобиль.
