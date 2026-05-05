@@ -82,25 +82,40 @@ export default function CabinetPage() {
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
-            {left === 0 && (
-              <a
-                href="https://t.me/primerkakoles_bot"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full bg-orange-500 px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-orange-400"
-              >
-                Тестовая примерка в Telegram-боте
-              </a>
-            )}
-            {left > 0 && (
-              <Link
-                to="/try"
-                className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white"
-              >
-                Примерить диски →
-              </Link>
-            )}
+            <Link
+              to="/try"
+              className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white"
+            >
+              Примерить диски →
+            </Link>
+            <button
+              type="button"
+              disabled
+              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-neutral-500"
+            >
+              Купить генерации · скоро
+            </button>
+            <Link
+              to="/my"
+              className="rounded-full border border-white/15 px-6 py-3 text-center text-sm font-semibold text-neutral-200 transition hover:bg-white/5 hover:text-white"
+            >
+              Мои примерки →
+            </Link>
           </div>
+        </div>
+
+        <div className="mt-4 rounded-3xl border border-sky-400/20 bg-sky-500/10 p-6 text-center backdrop-blur">
+          <p className="text-sm text-sky-100">
+            Тестовую примерку вы можете сделать в нашем Telegram-боте.
+          </p>
+          <a
+            href="https://t.me/primerkakoles_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex w-full justify-center rounded-full bg-sky-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-400"
+          >
+            Telegram-бот →
+          </a>
         </div>
       </div>
     </Layout>
