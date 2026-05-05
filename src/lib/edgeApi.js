@@ -36,8 +36,5 @@ export function toMediaUrl(url) {
 
 function getEdgeUrl() {
   if (configuredEdgeUrl) return configuredEdgeUrl
-  if (typeof window !== 'undefined' && window.location.hostname === 'app.primerkakoles.ru') {
-    return ''
-  }
   return null
 }

@@ -127,7 +127,7 @@ npm run preview
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
-- `VITE_EDGE_URL` - optional; if empty, the frontend uses same-origin `/api` and `/media` only on `app.primerkakoles.ru`.
+- `VITE_EDGE_URL` - optional API/media proxy URL. If empty, frontend falls back to direct Supabase calls and original Storage URLs.
 - `VITE_TELEGRAM_BOT_USERNAME` передается в GitHub Actions build, но по проверенному коду сейчас не используется.
 
 Важно:
@@ -181,16 +181,15 @@ npm run preview
 ## Cloudflare Edge
 
 - Worker: `primerkakoles-edge`.
-- Routes:
+- Routes were tested but are not suitable while `app.primerkakoles.ru` must stay DNS-only for Russia:
   - `app.primerkakoles.ru/api/*`
   - `app.primerkakoles.ru/media/*`
 - Worker source is stored in `cloudflare/primerkakoles-edge.js`.
 - Worker secrets:
   - `SUPABASE_URL`
   - `SUPABASE_ANON_KEY`
-- `/api/profile` ускоряет загрузку профиля и баланса кабинета.
-- `/api/gallery` и `/api/my-generations` ускоряют списки генераций.
-- `/media/*` проксирует Supabase Storage для изображений.
+- Current frontend uses edge only when `VITE_EDGE_URL` is explicitly set.
+- With `VITE_EDGE_URL` empty, images use original Supabase Storage URLs.
 
 ## Проверенные Риски
 

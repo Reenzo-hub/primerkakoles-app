@@ -15,6 +15,8 @@
 - Добавлен media proxy `/media/*` для Supabase Storage с кешированием изображений.
 - Frontend переключен на edge API для профиля, публичной галереи и личной галереи с fallback на прямой Supabase.
 - Изображения из Supabase Storage на production-домене преобразуются в `/media/storage/v1/object/...`.
+- После проверки в РФ Cloudflare proxy для всего `app` признан неподходящим: при включенном orange cloud сайт становится недоступен части пользователей.
+- Frontend media proxy изменен на opt-in: `/media/*` используется только если явно задан `VITE_EDGE_URL`; иначе показываются оригинальные Supabase Storage URL.
 
 ### Документация Проекта
 

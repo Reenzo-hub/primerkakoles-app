@@ -6,8 +6,8 @@
 
 ## Ближайший Приоритет
 
-- Развернуть код `cloudflare/primerkakoles-edge.js` в Cloudflare Worker `primerkakoles-edge`.
-- Проверить `/api/profile`, `/api/gallery`, `/api/my-generations` и `/media/*` на production-домене.
+- Подготовить server-side proxy для РФ вместо Cloudflare routes на `app.primerkakoles.ru`.
+- После выбора серверного прокси задать `VITE_EDGE_URL` на его домен и проверить `/api/profile`, `/api/gallery`, `/api/my-generations`, `/media/*`.
 - Добавить явную и понятную обработку отсутствующих env-переменных.
 - Проверить production build в среде с установленным Node/npm.
 - Убрать или документировать `vercel.json.bak`.
