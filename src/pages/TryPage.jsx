@@ -147,7 +147,7 @@ export default function TryPage() {
               Войдите, чтобы примерить
             </h1>
             <p className="mt-3 text-sm text-neutral-400">
-              Регистрация через email. На старте дарим 1 бесплатную примерку.
+              Зарегистрируйтесь через email, чтобы открыть кабинет и сохранять примерки.
             </p>
             <button
               onClick={() => navigate('/login')}

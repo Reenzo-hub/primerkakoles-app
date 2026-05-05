@@ -61,6 +61,7 @@ export default function Layout({ children }) {
                 <FooterLink to="/try">Примерить диски</FooterLink>
                 <FooterLink to="/gallery">Примеры</FooterLink>
                 {user && <FooterLink to="/my">Мои примерки</FooterLink>}
+                <FooterLink to="/support">Поддержка</FooterLink>
               </ul>
             </div>
 

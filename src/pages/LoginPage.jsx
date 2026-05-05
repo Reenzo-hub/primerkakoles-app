@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/useAuth.js'
 import { useSeo } from '../lib/useSeo.js'
 
-const RESEND_DELAY_SEC = 30
-
 export default function LoginPage() {
   useSeo({
     title: 'Вход · Примерка Колёс',
     description:
-      'Войдите по SMS, чтобы сохранять примерки и отслеживать баланс генераций.',
+      'Создайте кабинет или войдите по email и паролю, чтобы сохранять примерки и отслеживать баланс генераций.',
   })
 
   const navigate = useNavigate()
@@ -26,17 +24,28 @@ export default function LoginPage() {
       <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur">
           <h1 className="bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-3xl font-black tracking-tight text-transparent">
-            Вход
+            Кабинет
           </h1>
           <p className="mt-2 text-sm text-neutral-400">
-            Получите код по SMS — это быстрее, чем регистрация.
+            Зарегистрируйтесь по email или войдите в уже созданный кабинет.
           </p>
 
-          <SmsSection />
+          <EmailPasswordSection />
 
           <Divider />
 
-          <TelegramSoon />
+          <PhoneSoon />
+
+          <p className="mt-6 text-center text-xs text-neutral-500">
+            Забыли пароль? Напишите в{' '}
+            <Link
+              to="/support"
+              className="text-neutral-300 underline-offset-4 transition hover:text-white hover:underline"
+            >
+              поддержку
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </Layout>
@@ -53,143 +62,129 @@ function Divider() {
   )
 }
 
-function SmsSection() {
-  const [step, setStep] = useState('phone') // phone | code
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [sending, setSending] = useState(false)
-  const [verifying, setVerifying] = useState(false)
+function EmailPasswordSection() {
+  const [mode, setMode] = useState('register')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
-  const [resendIn, setResendIn] = useState(0)
+  const [message, setMessage] = useState(null)
 
-  useEffect(() => {
-    if (resendIn <= 0) return
-    const t = setTimeout(() => setResendIn((s) => s - 1), 1000)
-    return () => clearTimeout(t)
-  }, [resendIn])
+  const normalizedEmail = email.trim().toLowerCase()
+  const passwordValid = password.length >= 6
+  const emailValid = useMemo(() => /\S+@\S+\.\S+/.test(normalizedEmail), [normalizedEmail])
+  const canSubmit = emailValid && passwordValid && !submitting
 
-  const phoneDigits = phone
-  const e164 = '+7' + phoneDigits
-  const phoneValid = phoneDigits.length === 10
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!canSubmit) return
 
-  const sendCode = async (e) => {
-    e?.preventDefault()
-    if (!phoneValid) return
-    setSending(true)
+    setSubmitting(true)
     setError(null)
-    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164 })
-    setSending(false)
+    setMessage(null)
+
+    const authCall =
+      mode === 'register'
+        ? supabase.auth.signUp({
+            email: normalizedEmail,
+            password,
+          })
+        : supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          })
+
+    const { data, error: err } = await authCall
+    setSubmitting(false)
+
     if (err) {
-      setError(err.message)
+      setError(getAuthErrorMessage(err.message))
       return
     }
-    setStep('code')
-    setResendIn(RESEND_DELAY_SEC)
-  }
 
-  const verifyCode = async (e) => {
-    e?.preventDefault()
-    if (code.length !== 6) return
-    setVerifying(true)
-    setError(null)
-    const { error: err } = await supabase.auth.verifyOtp({
-      phone: e164,
-      token: code,
-      type: 'sms',
-    })
-    setVerifying(false)
-    if (err) {
-      setError(err.message)
-      return
+    if (mode === 'register' && !data.session) {
+      setMessage(
+        'Кабинет создан. Теперь можно войти с этим email и паролем.',
+      )
     }
-    // useAuth picks up the new session and LoginPage redirects to /cabinet.
   }
 
-  if (step === 'code') {
-    return (
-      <form onSubmit={verifyCode} className="mt-6 flex flex-col gap-3">
-        <p className="text-sm text-neutral-300">
-          Код отправлен на{' '}
-          <span className="font-semibold text-white">{formatRu(phoneDigits)}</span>
-        </p>
-
-        <input
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          autoFocus
-          maxLength={6}
-          placeholder="000000"
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-center text-lg tracking-[0.5em] text-white placeholder:text-neutral-600 focus:border-white/30 focus:outline-none"
-        />
-
-        <button
-          type="submit"
-          disabled={code.length !== 6 || verifying}
-          className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
-        >
-          {verifying ? 'Проверка...' : 'Войти'}
-        </button>
-
-        <div className="flex items-center justify-between text-xs">
-          <button
-            type="button"
-            onClick={() => {
-              setStep('phone')
-              setCode('')
-              setError(null)
-            }}
-            className="text-neutral-400 transition hover:text-white"
-          >
-            ← Изменить номер
-          </button>
-          {resendIn > 0 ? (
-            <span className="text-neutral-500">
-              Повторно через {resendIn} с
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={sendCode}
-              disabled={sending}
-              className="text-neutral-300 transition hover:text-white disabled:opacity-50"
-            >
-              {sending ? 'Отправка...' : 'Отправить ещё раз'}
-            </button>
-          )}
-        </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
-            {error}
-          </div>
-        )}
-      </form>
-    )
+  const switchMode = (nextMode) => {
+    setMode(nextMode)
+    setError(null)
+    setMessage(null)
   }
 
   return (
-    <form onSubmit={sendCode} className="mt-6 flex flex-col gap-3">
+    <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+        <button
+          type="button"
+          onClick={() => switchMode('register')}
+          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+            mode === 'register'
+              ? 'bg-white text-neutral-950'
+              : 'text-neutral-300 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          Регистрация
+        </button>
+        <button
+          type="button"
+          onClick={() => switchMode('login')}
+          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+            mode === 'login'
+              ? 'bg-white text-neutral-950'
+              : 'text-neutral-300 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          Вход
+        </button>
+      </div>
+
       <input
-        type="tel"
-        inputMode="numeric"
-        autoComplete="tel"
+        type="email"
+        inputMode="email"
+        autoComplete="email"
         autoFocus
-        placeholder="+7 999 000 00 00"
-        value={formatRu(phone)}
-        onChange={(e) => setPhone(normalizeRuPhone(e.target.value))}
+        placeholder="email@example.ru"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-3 text-white placeholder:text-neutral-500 focus:border-white/30 focus:outline-none"
+      />
+
+      <input
+        type="password"
+        autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+        placeholder="Пароль от 6 символов"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
         className="w-full rounded-full border border-white/10 bg-white/5 px-5 py-3 text-white placeholder:text-neutral-500 focus:border-white/30 focus:outline-none"
       />
 
       <button
         type="submit"
-        disabled={!phoneValid || sending}
+        disabled={!canSubmit}
         className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-500"
       >
-        {sending ? 'Отправляем код...' : 'Получить код'}
+        {submitting
+          ? mode === 'register'
+            ? 'Создаём кабинет...'
+            : 'Входим...'
+          : mode === 'register'
+          ? 'Создать кабинет'
+          : 'Войти'}
       </button>
+
+      {!passwordValid && password.length > 0 && (
+        <p className="text-xs text-neutral-500">Минимум 6 символов.</p>
+      )}
+
+      {message && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+          {message}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
@@ -200,37 +195,38 @@ function SmsSection() {
   )
 }
 
-function TelegramSoon() {
+function PhoneSoon() {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-neutral-300">
-          Войти через Telegram
+          Войти через телефон
         </span>
         <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-300">
           Скоро
         </span>
       </div>
       <p className="mt-2 text-xs text-neutral-500">
-        Готовим вход через бота — будет в один клик.
+        Вернём телефонный вход позже, когда подберём подходящий канал.
       </p>
     </div>
   )
 }
 
-function formatRu(digits) {
-  if (!digits) return ''
-  if (digits.length <= 3) return `+7 ${digits}`
-  if (digits.length <= 6) return `+7 ${digits.slice(0, 3)} ${digits.slice(3)}`
-  if (digits.length <= 8)
-    return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
-  return `+7 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`
-}
-
-function normalizeRuPhone(value) {
-  const digits = value.replace(/\D/g, '')
-  if (digits.startsWith('7') || digits.startsWith('8')) {
-    return digits.slice(1, 11)
+function getAuthErrorMessage(message) {
+  if (!message) return 'Не удалось выполнить действие. Попробуйте ещё раз.'
+  const lower = message.toLowerCase()
+  if (lower.includes('invalid login credentials')) {
+    return 'Неверный email или пароль.'
   }
-  return digits.slice(0, 10)
+  if (lower.includes('user already registered') || lower.includes('already registered')) {
+    return 'Кабинет с таким email уже есть. Переключитесь на вход.'
+  }
+  if (lower.includes('password')) {
+    return 'Проверьте пароль: минимум 6 символов.'
+  }
+  if (lower.includes('email')) {
+    return 'Проверьте email.'
+  }
+  return message
 }
