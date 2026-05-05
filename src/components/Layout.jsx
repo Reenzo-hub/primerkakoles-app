@@ -2,7 +2,7 @@ import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../lib/useAuth.js'
 
 export default function Layout({ children }) {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   return (
     <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -42,7 +42,7 @@ export default function Layout({ children }) {
         <main className="flex-1">{children}</main>
 
         <footer className="border-t border-white/5 px-6 py-10 sm:px-10">
-          <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-3">
+          <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-4">
             <div>
               <div className="flex items-center gap-2 text-sm font-medium tracking-widest text-neutral-400">
                 <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
@@ -61,9 +61,28 @@ export default function Layout({ children }) {
                 <FooterLink to="/try">Примерить диски</FooterLink>
                 <FooterLink to="/gallery">Примеры</FooterLink>
                 {user && <FooterLink to="/my">Мои примерки</FooterLink>}
-                <FooterLink to="/support">Поддержка</FooterLink>
               </ul>
             </div>
+
+            {user && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  Личный кабинет
+                </h3>
+                <ul className="mt-3 flex flex-col gap-2 text-sm">
+                  <FooterLink to="/cabinet">Кабинет</FooterLink>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={signOut}
+                      className="text-left text-neutral-300 transition hover:text-white"
+                    >
+                      Выйти
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
 
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -80,6 +99,7 @@ export default function Layout({ children }) {
                     Telegram-бот →
                   </a>
                 </li>
+                <FooterLink to="/support">Поддержка</FooterLink>
               </ul>
             </div>
           </div>

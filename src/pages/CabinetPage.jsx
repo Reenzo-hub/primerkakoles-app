@@ -12,17 +12,12 @@ export default function CabinetPage() {
   })
 
   const navigate = useNavigate()
-  const { user, loading, signOut } = useAuth()
+  const { user, loading } = useAuth()
   const { profile } = useUserProfile(user)
 
   useEffect(() => {
     if (!loading && !user) navigate('/login', { replace: true })
   }, [loading, user, navigate])
-
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/')
-  }
 
   if (loading || !user) {
     return (
@@ -84,17 +79,19 @@ export default function CabinetPage() {
                 У вас нет доступных примерок
               </p>
             )}
-            <a
-              href="https://t.me/primerkakoles_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-4 inline-flex text-sm font-medium text-orange-300 underline-offset-4 transition hover:text-orange-200 hover:underline"
-            >
-              Тестовую примерку вы можете сделать в нашем Telegram-боте →
-            </a>
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
+            {left === 0 && (
+              <a
+                href="https://t.me/primerkakoles_bot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full bg-orange-500 px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-orange-400"
+              >
+                Тестовая примерка в Telegram-боте
+              </a>
+            )}
             {left > 0 && (
               <Link
                 to="/try"
@@ -103,12 +100,6 @@ export default function CabinetPage() {
                 Примерить диски →
               </Link>
             )}
-            <button
-              onClick={handleSignOut}
-              className="rounded-full border border-white/15 px-6 py-3 text-sm text-neutral-300 transition hover:bg-white/5 hover:text-white"
-            >
-              Выйти
-            </button>
           </div>
         </div>
       </div>

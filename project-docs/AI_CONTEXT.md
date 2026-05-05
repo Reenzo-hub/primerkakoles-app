@@ -147,6 +147,7 @@ npm run preview
 - `20260423_pr5_telegram_user_fields.sql` - добавляет `first_name`, `username`.
 - `20260424_pr6_phone_column_trigger.sql` - добавляет `phone`, обновляет trigger создания пользователя.
 - `20260505_pr7_email_password_no_free_generations.sql` - обновляет trigger создания пользователя: новые пользователи получают `generations_limit = 0`.
+- `20260505_pr8_reset_web_starter_grants.sql` - обнуляет старый неиспользованный web-стартовый баланс `1 из 1`.
 
 Критично при изменениях:
 
