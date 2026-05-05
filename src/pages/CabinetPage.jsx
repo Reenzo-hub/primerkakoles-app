@@ -72,21 +72,37 @@ export default function CabinetPage() {
             <div className="text-xs uppercase tracking-wider text-neutral-500">
               Баланс генераций
             </div>
-            <div className="mt-1 text-3xl font-semibold">
-              {left}{' '}
-              <span className="text-base font-normal text-neutral-400">
-                из {limit}
-              </span>
-            </div>
+            {left > 0 ? (
+              <div className="mt-1 text-3xl font-semibold">
+                {left}{' '}
+                <span className="text-base font-normal text-neutral-400">
+                  из {limit}
+                </span>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm font-medium text-neutral-200">
+                У вас нет доступных примерок
+              </p>
+            )}
+            <a
+              href="https://t.me/primerkakoles_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex text-sm font-medium text-orange-300 underline-offset-4 transition hover:text-orange-200 hover:underline"
+            >
+              Тестовую примерку вы можете сделать в нашем Telegram-боте →
+            </a>
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
-            <Link
-              to="/try"
-              className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white"
-            >
-              Примерить диски →
-            </Link>
+            {left > 0 && (
+              <Link
+                to="/try"
+                className="rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-neutral-950 transition hover:bg-orange-500 hover:text-white"
+              >
+                Примерить диски →
+              </Link>
+            )}
             <button
               onClick={handleSignOut}
               className="rounded-full border border-white/15 px-6 py-3 text-sm text-neutral-300 transition hover:bg-white/5 hover:text-white"

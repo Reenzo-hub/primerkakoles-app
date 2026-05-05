@@ -89,6 +89,8 @@ npm run preview
   - `generations_limit`
   - `generations_used`
 - Лимит генераций считается как `generations_limit - generations_used`.
+- Новые web-пользователи получают `generations_limit = 0`; в кабинете при нулевом балансе показывается сообщение `У вас нет доступных примерок`.
+- Тестовая примерка для пользователей без баланса направляется в Telegram-бот `https://t.me/primerkakoles_bot`.
 
 ### Генерация
 
