@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useAuth } from '../lib/useAuth.js'
+import { fetchEdgeJson, toMediaUrl } from '../lib/edgeApi.js'
 import { useSeo } from '../lib/useSeo.js'
 
 const PAGE_SIZE = 60
@@ -38,13 +39,7 @@ export default function MyGenerationsPage() {
     ;(async () => {
       setLoading(true)
       setError(null)
-      const { data, error: err } = await supabase
-        .from('generations')
-        .select('id, car_url, wheel_url, result_url, source, created_at')
-        .eq('auth_user_id', user.id)
-        .not('result_url', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(PAGE_SIZE)
+      const { data, error: err } = await fetchMyGenerationItems(user.id)
 
       if (cancelled) return
       if (err) setError(err.message)
@@ -75,7 +70,7 @@ export default function MyGenerationsPage() {
   }
   const closePreview = () => setPreview(null)
 
-  const activeUrl = preview ? preview[`${view}_url`] : null
+  const activeUrl = preview ? toMediaUrl(preview[`${view}_url`]) : null
 
   if (authLoading || !user) {
     return (
@@ -127,7 +122,7 @@ export default function MyGenerationsPage() {
               className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-left backdrop-blur transition hover:border-white/25"
             >
               <img
-                src={item.result_url}
+                src={toMediaUrl(item.result_url)}
                 alt="Моя примерка"
                 className="aspect-square w-full object-cover transition group-hover:scale-105"
                 loading="lazy"
@@ -209,5 +204,21 @@ function formatDate(iso) {
     return new Date(iso).toLocaleDateString('ru-RU')
   } catch {
     return iso
+  }
+}
+
+async function fetchMyGenerationItems(userId) {
+  try {
+    const data = await fetchEdgeJson('/api/my-generations', { auth: true })
+    return { data, error: null }
+  } catch {
+    const result = await supabase
+      .from('generations')
+      .select('id, car_url, wheel_url, result_url, source, created_at')
+      .eq('auth_user_id', userId)
+      .not('result_url', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(PAGE_SIZE)
+    return { data: result.data, error: result.error }
   }
 }

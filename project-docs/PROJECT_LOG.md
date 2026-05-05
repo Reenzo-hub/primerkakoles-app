@@ -6,6 +6,16 @@
 
 ## 2026-05-05
 
+### Cloudflare Edge
+
+- Подготовлен Worker `primerkakoles-edge` для routes `app.primerkakoles.ru/api/*` и `app.primerkakoles.ru/media/*`.
+- Добавлен endpoint `/api/profile` для ускорения баланса и профиля кабинета.
+- Добавлен endpoint `/api/gallery` для публичной галереи.
+- Добавлен endpoint `/api/my-generations` для личной галереи с проверкой Supabase JWT через `/auth/v1/user`.
+- Добавлен media proxy `/media/*` для Supabase Storage с кешированием изображений.
+- Frontend переключен на edge API для профиля, публичной галереи и личной галереи с fallback на прямой Supabase.
+- Изображения из Supabase Storage на production-домене преобразуются в `/media/storage/v1/object/...`.
+
 ### Документация Проекта
 
 - Создана папка `project-docs`.

@@ -6,6 +6,8 @@
 
 ## Ближайший Приоритет
 
+- Развернуть код `cloudflare/primerkakoles-edge.js` в Cloudflare Worker `primerkakoles-edge`.
+- Проверить `/api/profile`, `/api/gallery`, `/api/my-generations` и `/media/*` на production-домене.
 - Добавить явную и понятную обработку отсутствующих env-переменных.
 - Проверить production build в среде с установленным Node/npm.
 - Убрать или документировать `vercel.json.bak`.

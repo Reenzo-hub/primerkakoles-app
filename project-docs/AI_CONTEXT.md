@@ -127,6 +127,7 @@ npm run preview
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
+- `VITE_EDGE_URL` - optional; if empty, the frontend uses same-origin `/api` and `/media` only on `app.primerkakoles.ru`.
 - `VITE_TELEGRAM_BOT_USERNAME` передается в GitHub Actions build, но по проверенному коду сейчас не используется.
 
 Важно:
@@ -176,6 +177,20 @@ npm run preview
 - Роутинг работает через `BrowserRouter`.
 - Для прямых URL вроде `/try` и `/cabinet` нужен `404.html` fallback.
 - `public/CNAME` должен попадать в `dist` при сборке Vite.
+
+## Cloudflare Edge
+
+- Worker: `primerkakoles-edge`.
+- Routes:
+  - `app.primerkakoles.ru/api/*`
+  - `app.primerkakoles.ru/media/*`
+- Worker source is stored in `cloudflare/primerkakoles-edge.js`.
+- Worker secrets:
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+- `/api/profile` ускоряет загрузку профиля и баланса кабинета.
+- `/api/gallery` и `/api/my-generations` ускоряют списки генераций.
+- `/media/*` проксирует Supabase Storage для изображений.
 
 ## Проверенные Риски
 
