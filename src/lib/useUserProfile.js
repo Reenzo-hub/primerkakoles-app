@@ -43,7 +43,15 @@ export function useUserProfile(user) {
 
 async function fetchProfileData(userId) {
   try {
-    return await fetchEdgeJson('/api/profile', { auth: true })
+    const query = new URLSearchParams({
+      select: SELECT,
+      auth_user_id: `eq.${userId}`,
+      limit: '1',
+    })
+    const data = await fetchEdgeJson(`/rest/users?${query.toString()}`, {
+      auth: true,
+    })
+    return data?.[0] || null
   } catch {
     const { data } = await supabase
       .from('users')

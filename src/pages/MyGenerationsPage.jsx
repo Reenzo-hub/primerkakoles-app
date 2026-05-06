@@ -209,7 +209,16 @@ function formatDate(iso) {
 
 async function fetchMyGenerationItems(userId) {
   try {
-    const data = await fetchEdgeJson('/api/my-generations', { auth: true })
+    const query = new URLSearchParams({
+      select: 'id,car_url,wheel_url,result_url,source,created_at',
+      auth_user_id: `eq.${userId}`,
+      result_url: 'not.is.null',
+      order: 'created_at.desc',
+      limit: String(PAGE_SIZE),
+    })
+    const data = await fetchEdgeJson(`/rest/generations?${query.toString()}`, {
+      auth: true,
+    })
     return { data, error: null }
   } catch {
     const result = await supabase

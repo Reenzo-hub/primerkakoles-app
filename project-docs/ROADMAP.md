@@ -6,8 +6,8 @@
 
 ## Ближайший Приоритет
 
-- Подготовить server-side proxy для РФ вместо Cloudflare routes на `app.primerkakoles.ru`.
-- После выбора серверного прокси задать `VITE_EDGE_URL` на его домен и проверить `/api/profile`, `/api/gallery`, `/api/my-generations`, `/media/*`.
+- Проверить `https://api.primerkakoles.ru/rest/...` и `https://api.primerkakoles.ru/storage/...` из production frontend.
+- Убедиться, что баланс кабинета и галереи в РФ реально грузятся быстрее через Nginx proxy.
 - Добавить явную и понятную обработку отсутствующих env-переменных.
 - Проверить production build в среде с установленным Node/npm.
 - Убрать или документировать `vercel.json.bak`.
@@ -15,6 +15,7 @@
 - Подготовить базовый checklist ручного тестирования перед деплоем.
 - В Supabase Auth проверить настройку email confirmation: для текущего сценария она должна быть отключена.
 - Продумать и включить защиту от массовых регистраций.
+- Решить, нужно ли позже проксировать через сервер также `/auth/v1/*`, если direct Supabase Auth будет тормозить в РФ.
 
 ## UX И Продукт
 

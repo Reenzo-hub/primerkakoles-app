@@ -189,7 +189,13 @@ function formatDate(iso) {
 
 async function fetchGalleryItems() {
   try {
-    const data = await fetchEdgeJson('/api/gallery')
+    const query = new URLSearchParams({
+      select: 'id,car_url,wheel_url,result_url,source,created_at',
+      result_url: 'not.is.null',
+      order: 'created_at.desc',
+      limit: String(PAGE_SIZE),
+    })
+    const data = await fetchEdgeJson(`/rest/generations?${query.toString()}`)
     return { data, error: null }
   } catch {
     const result = await supabase

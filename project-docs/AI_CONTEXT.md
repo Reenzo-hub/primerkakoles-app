@@ -127,7 +127,7 @@ npm run preview
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
-- `VITE_EDGE_URL` - optional API/media proxy URL. If empty, frontend falls back to direct Supabase calls and original Storage URLs.
+- `VITE_EDGE_URL` - optional API/media proxy URL. Current production target: `https://api.primerkakoles.ru`.
 - `VITE_TELEGRAM_BOT_USERNAME` передается в GitHub Actions build, но по проверенному коду сейчас не используется.
 
 Важно:
@@ -178,18 +178,16 @@ npm run preview
 - Для прямых URL вроде `/try` и `/cabinet` нужен `404.html` fallback.
 - `public/CNAME` должен попадать в `dist` при сборке Vite.
 
-## Cloudflare Edge
+## API Proxy
 
-- Worker: `primerkakoles-edge`.
-- Routes were tested but are not suitable while `app.primerkakoles.ru` must stay DNS-only for Russia:
-  - `app.primerkakoles.ru/api/*`
-  - `app.primerkakoles.ru/media/*`
-- Worker source is stored in `cloudflare/primerkakoles-edge.js`.
-- Worker secrets:
-  - `SUPABASE_URL`
-  - `SUPABASE_ANON_KEY`
-- Current frontend uses edge only when `VITE_EDGE_URL` is explicitly set.
-- With `VITE_EDGE_URL` empty, images use original Supabase Storage URLs.
+- Production proxy domain: `https://api.primerkakoles.ru`.
+- Platform: VPS Ubuntu 24.04 with Nginx reverse proxy.
+- Proxy routes:
+  - `/rest/*` -> Supabase REST API `/rest/v1/*`
+  - `/storage/*` -> Supabase Storage `/storage/v1/*`
+- Proxy forwards `apikey` and `Authorization` headers to Supabase.
+- Frontend uses `VITE_EDGE_URL` for profile/balance, gallery data and Storage image URLs.
+- Auth endpoints are still handled by the direct Supabase client.
 
 ## Проверенные Риски
 

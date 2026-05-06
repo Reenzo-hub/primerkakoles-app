@@ -18,6 +18,18 @@
 - После проверки в РФ Cloudflare proxy для всего `app` признан неподходящим: при включенном orange cloud сайт становится недоступен части пользователей.
 - Frontend media proxy изменен на opt-in: `/media/*` используется только если явно задан `VITE_EDGE_URL`; иначе показываются оригинальные Supabase Storage URL.
 
+### Nginx Proxy
+
+- Поднят серверный proxy на `https://api.primerkakoles.ru`.
+- На VPS Ubuntu 24.04 настроен Nginx reverse proxy для Supabase.
+- Проксируются маршруты:
+  - `/rest/*` -> `/rest/v1/*`
+  - `/storage/*` -> `/storage/v1/*`
+- Фронтенд переключен с Cloudflare-style endpoints на Nginx proxy:
+  - профиль и баланс -> `/rest/users?...`
+  - галереи -> `/rest/generations?...`
+  - изображения -> `/storage/object/...`
+
 ### Документация Проекта
 
 - Создана папка `project-docs`.
