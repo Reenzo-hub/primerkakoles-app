@@ -7,6 +7,7 @@
 ## Рабочие Документы
 
 - `project-docs/AI_CONTEXT.md` - стабильная карта проекта: архитектура, технологии, маршруты, интеграции, риски и правила работы.
+- `project-docs/ARCHITECTURE.md` - техническая архитектура: web app, Supabase, Nginx proxy, n8n, Telegram-бот и общие потоки данных.
 - `project-docs/PROJECT_LOG.md` - журнал проверенных изменений и важных решений.
 - `project-docs/ROADMAP.md` - планы, приоритеты и следующие задачи.
 
@@ -18,7 +19,7 @@
 - Деплой: GitHub Pages через GitHub Actions.
 - Основная ветка: `main`.
 - Кастомный домен: `app.primerkakoles.ru`.
-- Backend в репозитории отсутствует. Используются Supabase и внешний webhook генерации.
+- Backend бизнес-логики в репозитории отсутствует. Используются Supabase, внешний webhook генерации и внешний Nginx proxy `https://api.primerkakoles.ru` для ускорения Supabase REST/Storage в РФ.
 
 ## Технологии
 
@@ -45,7 +46,7 @@ npm run preview
 - `src/index.css` - Tailwind import и базовые стили.
 - `src/pages/` - страницы приложения.
 - `src/components/` - переиспользуемые UI-компоненты.
-- `src/lib/` - Supabase-клиент, hooks авторизации, профиля и SEO.
+- `src/lib/` - Supabase-клиент, hooks авторизации, профиля, SEO и helper `edgeApi.js` для Nginx proxy REST/Storage.
 - `supabase/migrations/` - SQL-миграции Supabase.
 - `.github/workflows/deploy.yml` - деплой в GitHub Pages.
 - `public/CNAME` - домен GitHub Pages.
@@ -79,6 +80,7 @@ npm run preview
 ### Профиль И Лимиты
 
 - Профиль пользователя загружается из таблицы `users` через `src/lib/useUserProfile.js`.
+- Основной путь загрузки профиля и баланса в production: `https://api.primerkakoles.ru/rest/users?...` через `src/lib/edgeApi.js`; при ошибке есть fallback на прямой Supabase client.
 - Используемые поля профиля:
   - `id`
   - `email`
@@ -111,6 +113,8 @@ npm run preview
 - Публичная галерея: `src/pages/GalleryPage.jsx`.
 - Личная галерея: `src/pages/MyGenerationsPage.jsx`.
 - Обе читают таблицу `generations`.
+- В production галереи сначала читают данные через `https://api.primerkakoles.ru/rest/generations?...`; при ошибке есть fallback на прямой Supabase client.
+- URL изображений Supabase Storage преобразуются через `https://api.primerkakoles.ru/storage/...`.
 - Публичная галерея показывает последние генерации с непустым `result_url`.
 - Личная галерея фильтрует записи по `auth_user_id = user.id`.
 - В обеих галереях есть preview modal с переключением `result`, `car`, `wheel`.

@@ -4,6 +4,22 @@
 
 Правило ведения: сюда добавляем только то, что уже сделано, проверено или принято как решение. Планы и будущие задачи ведем в `project-docs/ROADMAP.md`.
 
+## 2026-05-06
+
+### Nginx Proxy Validation
+
+- Пользователь поверхностно проверил production после переключения на `https://api.primerkakoles.ru`: сайт открывается, фотографии загружаются, личный кабинет и баланс работают быстро.
+- Зафиксировано текущее production-решение: Supabase REST и Storage идут через Nginx reverse proxy `api.primerkakoles.ru`.
+- Cloudflare Worker/routes оставлены как историческая попытка и не используются как production-решение для РФ, потому что включение Cloudflare proxy для `app.primerkakoles.ru` делало сайт недоступным части пользователей.
+- Supabase Auth пока остается прямым через Supabase client; если вход или сессии будут тормозить в РФ, отдельной задачей нужно рассмотреть proxy для `/auth/v1/*`.
+
+### Architecture Documentation
+
+- Создан `project-docs/ARCHITECTURE.md` как отдельная техническая карта проекта.
+- В архитектуре зафиксировано, что генерация изображений для web app идет через n8n webhook.
+- Зафиксировано, что Telegram-бот является отдельным каналом генерации, но использует общую Supabase DB/Storage с web app.
+- Зафиксировано, что в Supabase стекаются данные из двух источников: web app `app.primerkakoles.ru` и Telegram-бот.
+
 ## 2026-05-05
 
 ### Cloudflare Edge

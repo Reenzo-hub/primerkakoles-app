@@ -1,8 +1,14 @@
-# Cloudflare Edge Worker
+# Cloudflare Edge Worker (Archive)
+
+This Worker was prepared as an experiment for proxying Supabase through Cloudflare.
+It is not the current production solution for users in Russia: enabling Cloudflare proxy
+for `app.primerkakoles.ru` made the site unavailable for part of the audience.
+
+Current production proxy: `https://api.primerkakoles.ru` on VPS/Nginx.
 
 Worker: `primerkakoles-edge`
 
-Production routes:
+Historical routes:
 
 - `app.primerkakoles.ru/api/*`
 - `app.primerkakoles.ru/media/*`
@@ -25,10 +31,12 @@ Worker source:
 
 ## Frontend
 
-The frontend auto-enables same-origin edge calls on `app.primerkakoles.ru`.
+The frontend currently uses `VITE_EDGE_URL=https://api.primerkakoles.ru` for the
+Nginx proxy. Do not use the Cloudflare routes as production instructions unless
+the infrastructure decision changes.
 
 Local development falls back to direct Supabase unless `VITE_EDGE_URL` is set.
-To test the production Worker from local dev, set:
+To test this archived Worker from local dev, set:
 
 ```env
 VITE_EDGE_URL=https://app.primerkakoles.ru
