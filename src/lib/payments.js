@@ -17,7 +17,10 @@ export async function createPaymentOrder(packageCode) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ package_code: packageCode }),
+    body: JSON.stringify({
+      package_code: packageCode,
+      customer_email: data?.session?.user?.email || null,
+    }),
   })
 
   let payload = null
