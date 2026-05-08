@@ -34,9 +34,15 @@ export async function createPaymentOrder(packageCode) {
     )
   }
 
-  if (!payload?.confirmation_url) {
+  const normalizedPayload = payload?.confirmation_url
+    ? payload
+    : payload?.body?.confirmation_url
+    ? payload.body
+    : payload
+
+  if (!normalizedPayload?.confirmation_url) {
     throw new Error('Платёж создан без ссылки на оплату. Напишите в поддержку.')
   }
 
-  return payload
+  return normalizedPayload
 }
