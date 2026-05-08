@@ -102,10 +102,6 @@ function EmailPasswordSection() {
       return
     }
 
-    if (mode === 'register' && data.user?.id) {
-      await ensureNoFreeGenerations(data.user.id)
-    }
-
     setSubmitting(false)
 
     if (mode === 'register' && !data.session) {
@@ -235,26 +231,4 @@ function getAuthErrorMessage(message) {
     return 'Проверьте email.'
   }
   return message
-}
-
-async function ensureNoFreeGenerations(userId) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ generations_limit: 0, generations_used: 0 })
-      .eq('auth_user_id', userId)
-      .eq('generations_limit', 1)
-      .eq('generations_used', 0)
-      .select('id')
-      .maybeSingle()
-
-    if (!error && data) return
-    await wait(250)
-  }
-}
-
-function wait(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
 }

@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
 import { useAuth } from '../lib/useAuth.js'
 import { useUserProfile } from '../lib/useUserProfile.js'
@@ -12,12 +12,37 @@ export default function CabinetPage() {
   })
 
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user, loading } = useAuth()
-  const { profile } = useUserProfile(user)
+  const { profile, refetch } = useUserProfile(user)
+  const [checkingPayment, setCheckingPayment] = useState(false)
+
+  const hasPaymentReturn = searchParams.get('payment') === 'return'
 
   useEffect(() => {
     if (!loading && !user) navigate('/login', { replace: true })
   }, [loading, user, navigate])
+
+  useEffect(() => {
+    if (!user || !hasPaymentReturn) return undefined
+
+    let cancelled = false
+    setCheckingPayment(true)
+
+    const run = async () => {
+      await refetch()
+      if (!cancelled) setCheckingPayment(false)
+    }
+
+    const firstTimer = window.setTimeout(run, 800)
+    const secondTimer = window.setTimeout(run, 3500)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(firstTimer)
+      window.clearTimeout(secondTimer)
+    }
+  }, [hasPaymentReturn, refetch, user])
 
   if (loading || !user) {
     return (
@@ -32,6 +57,11 @@ export default function CabinetPage() {
   const used = profile?.generations_used ?? 0
   const limit = profile?.generations_limit ?? 0
   const left = Math.max(0, limit - used)
+  const paymentNotice = !hasPaymentReturn
+    ? null
+    : checkingPayment
+    ? 'Проверяем оплату и обновляем баланс...'
+    : 'Если оплата уже прошла, баланс обновится автоматически или после ручного обновления.'
 
   const phoneFormatted = formatPhone(profile?.phone || user.phone)
 
@@ -81,6 +111,21 @@ export default function CabinetPage() {
             )}
           </div>
 
+          {paymentNotice && (
+            <div className="mt-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+              <p>{paymentNotice}</p>
+              {!checkingPayment && (
+                <button
+                  type="button"
+                  onClick={refetch}
+                  className="mt-3 rounded-full border border-emerald-300/30 px-4 py-2 text-xs font-semibold text-emerald-50 transition hover:bg-emerald-400/10"
+                >
+                  Обновить баланс
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="mt-6 flex flex-col gap-3">
             <Link
               to="/try"
@@ -88,13 +133,12 @@ export default function CabinetPage() {
             >
               Примерить диски →
             </Link>
-            <button
-              type="button"
-              disabled
-              className="rounded-full border border-white/15 px-6 py-3 text-sm font-semibold text-neutral-500"
+            <Link
+              to="/cabinet/buy"
+              className="rounded-full border border-white/15 px-6 py-3 text-center text-sm font-semibold text-neutral-200 transition hover:bg-white/5 hover:text-white"
             >
-              Купить генерации · скоро
-            </button>
+              Купить генерации →
+            </Link>
             <Link
               to="/my"
               className="rounded-full border border-white/15 px-6 py-3 text-center text-sm font-semibold text-neutral-200 transition hover:bg-white/5 hover:text-white"

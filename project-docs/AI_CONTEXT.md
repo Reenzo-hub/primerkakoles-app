@@ -222,3 +222,22 @@ npm run preview
 
 - Проверенные изменения и решения фиксируются в `project-docs/PROJECT_LOG.md`.
 - Текущие планы и следующие задачи фиксируются в `project-docs/ROADMAP.md`.
+
+## Web-Оплата Генераций
+
+- Реализована frontend-заготовка покупки генераций для `/cabinet/buy`.
+- Тарифы web и Telegram единые:
+  - `pack_1` - 1 генерация за 60 руб.
+  - `pack_5` - 5 генераций за 199 руб.
+  - `pack_10` - 10 генераций за 349 руб.
+- Frontend вызывает `VITE_PAYMENT_WEBHOOK_URL` и ожидает JSON `{ order_id, confirmation_url }`.
+- После создания платежа пользователь перенаправляется на `confirmation_url` ЮKassa.
+- Возврат после оплаты идет на `/cabinet?payment=return`; кабинет перечитывает профиль и показывает статус проверки оплаты.
+- Баланс должен начисляться только серверно: n8n/Supabase RPC увеличивает `users.generations_limit`, `generations_used` не меняется.
+- Добавлена миграция `20260508_pr9_web_generation_orders.sql`:
+  - таблица `generation_orders` для истории web-покупок;
+  - RLS на чтение только своих заказов;
+  - RPC `credit_generation_order(p_order_id uuid)` для идемпотентного начисления оплаченного заказа;
+  - browser-side update баланса в `public.users` закрывается через grant/revoke.
+- Добавлен импортируемый шаблон n8n без секретов: `n8n/primerka-web-payments.importable.json`.
+- Для production в текущей версии n8n без env нужно заменить placeholders в Code nodes: `ВСТАВЬ_SUPABASE_SERVICE_ROLE_KEY` и `ВСТАВЬ_СЕКРЕТНЫЙ_КЛЮЧ_ЮKASSA`.

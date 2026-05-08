@@ -221,3 +221,24 @@ Production:
 - Где именно обновляется `generations_used`: в n8n, webhook, Telegram-боте или другом сервисе.
 - Нужно ли проксировать Supabase Auth через `api.primerkakoles.ru/auth/v1/*`, если вход будет тормозить в РФ.
 - Какие RLS-политики нужны перед подключением оплаты и покупкой генераций.
+
+## Web-Оплата Через ЮKassa
+
+```mermaid
+flowchart LR
+  cabinet["/cabinet/buy<br/>React SPA"] --> create["n8n webhook<br/>web-payments/create"]
+  create --> auth["Supabase Auth<br/>JWT check"]
+  create --> orders["Supabase<br/>generation_orders"]
+  create --> yookassa["ЮKassa<br/>/v3/payments"]
+  yookassa --> userpay["Hosted payment page"]
+  yookassa --> notify["n8n webhook<br/>web-payments/yookassa"]
+  notify --> rpc["Supabase RPC<br/>credit_generation_order"]
+  rpc --> users["users.generations_limit"]
+  userpay --> cabinetReturn["/cabinet?payment=return"]
+```
+
+- Web app не хранит секреты ЮKassa и не начисляет баланс.
+- `generation_orders` хранит историю web-платежей и защищает от повторного начисления.
+- `credit_generation_order` вызывается серверной логикой после `payment.succeeded`; повторный webhook не добавляет генерации второй раз.
+- `generations_used` остается счетчиком фактических генераций и не меняется при покупке.
+- Рабочий Telegram workflow не меняется; для web добавлен отдельный шаблон `n8n/primerka-web-payments.importable.json`.

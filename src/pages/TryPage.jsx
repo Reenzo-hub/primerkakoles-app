@@ -191,8 +191,8 @@ export default function TryPage() {
             {left === 0 && (
               <div className="mb-6 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4 text-sm text-orange-200">
                 Баланс генераций исчерпан.{' '}
-                <Link to="/cabinet" className="underline hover:text-white">
-                  Пополнить в кабинете →
+                <Link to="/cabinet/buy" className="underline hover:text-white">
+                  Купить генерации →
                 </Link>
               </div>
             )}

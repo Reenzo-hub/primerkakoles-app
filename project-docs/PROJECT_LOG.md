@@ -4,6 +4,24 @@
 
 Правило ведения: сюда добавляем только то, что уже сделано, проверено или принято как решение. Планы и будущие задачи ведем в `project-docs/ROADMAP.md`.
 
+## 2026-05-08
+
+### Web-Оплата Генераций
+
+- Добавлена миграция `20260508_pr9_web_generation_orders.sql` для web-заказов генераций:
+  - таблица `generation_orders`;
+  - RLS на чтение своих заказов;
+  - RPC `credit_generation_order(p_order_id uuid)` для идемпотентного начисления;
+  - frontend-доступ к прямому изменению полей баланса `users.generations_limit` и `users.generations_used` закрыт через grant/revoke.
+- Добавлены тарифы web-покупки: `1 за 60 руб.`, `5 за 199 руб.`, `10 за 349 руб.`.
+- Добавлена страница `/cabinet/buy` для покупки генераций.
+- Кнопка `Купить генерации` в кабинете теперь ведет на `/cabinet/buy`.
+- Ссылка при исчерпанном балансе на `/try` теперь ведет к покупке генераций.
+- Добавлена frontend-интеграция с `VITE_PAYMENT_WEBHOOK_URL`, которая ожидает от n8n `confirmation_url` и перенаправляет пользователя на оплату ЮKassa.
+- Добавлен шаблон отдельного n8n workflow без секретов: `n8n/primerka-web-payments.importable.json`.
+- Добавлен env placeholder `VITE_PAYMENT_WEBHOOK_URL` в `.env.example`.
+- Старый frontend fallback регистрации, который пытался обнулить starter-баланс из браузера, удален из `LoginPage`.
+
 ## 2026-05-06
 
 ### Nginx Proxy Validation

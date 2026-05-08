@@ -5,6 +5,7 @@ import GalleryPage from './pages/GalleryPage.jsx'
 import MyGenerationsPage from './pages/MyGenerationsPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import AuthCallbackPage from './pages/AuthCallbackPage.jsx'
+import BuyGenerationsPage from './pages/BuyGenerationsPage.jsx'
 import CabinetPage from './pages/CabinetPage.jsx'
 import SupportPage from './pages/SupportPage.jsx'
 
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/cabinet" element={<CabinetPage />} />
+        <Route path="/cabinet/buy" element={<BuyGenerationsPage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
