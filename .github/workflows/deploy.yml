@@ -33,6 +33,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_WEBHOOK_URL: ${{ secrets.VITE_WEBHOOK_URL }}
+          VITE_PAYMENT_WEBHOOK_URL: ${{ secrets.VITE_PAYMENT_WEBHOOK_URL }}
           VITE_TELEGRAM_BOT_USERNAME: ${{ secrets.VITE_TELEGRAM_BOT_USERNAME }}
 
       - name: SPA fallback (copy index.html to 404.html)
