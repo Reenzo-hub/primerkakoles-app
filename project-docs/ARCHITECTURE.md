@@ -174,6 +174,7 @@ Frontend env:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
+- `VITE_PAYMENT_WEBHOOK_URL`
 - `VITE_EDGE_URL`
 
 Production:
@@ -242,3 +243,4 @@ flowchart LR
 - `credit_generation_order` вызывается серверной логикой после `payment.succeeded`; повторный webhook не добавляет генерации второй раз.
 - `generations_used` остается счетчиком фактических генераций и не меняется при покупке.
 - Рабочий Telegram workflow не меняется; для web добавлен отдельный шаблон `n8n/primerka-web-payments.importable.json`.
+- ЮKassa требует email или телефон покупателя для чека. Текущий web-сценарий передает email из Supabase Auth как `customer_email`; n8n валидирует его до создания платежа.

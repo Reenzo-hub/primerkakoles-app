@@ -21,6 +21,10 @@
 - Добавлен шаблон отдельного n8n workflow без секретов: `n8n/primerka-web-payments.importable.json`.
 - Добавлен env placeholder `VITE_PAYMENT_WEBHOOK_URL` в `.env.example`.
 - Старый frontend fallback регистрации, который пытался обнулить starter-баланс из браузера, удален из `LoginPage`.
+- GitHub Pages deploy workflow обновлен: `VITE_PAYMENT_WEBHOOK_URL` передается из GitHub Secrets в Vite build.
+- n8n workflow адаптирован под версию без environment variables: секреты вставляются в placeholders внутри Code nodes, реальные секреты в git не хранятся.
+- В web-покупке добавлена передача `customer_email` из Supabase Auth, потому что ЮKassa требует email или телефон для формирования чека.
+- Production smoke-test web-покупки прошел: тестовый платеж создался, переход на ЮKassa работает, сценарий подтвержден пользователем.
 
 ## 2026-05-06
 

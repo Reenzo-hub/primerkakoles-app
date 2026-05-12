@@ -93,7 +93,7 @@ npm run preview
 - Лимит генераций считается как `generations_limit - generations_used`.
 - Новые web-пользователи получают `generations_limit = 0`; в кабинете при нулевом балансе показывается сообщение `У вас нет доступных примерок`.
 - Тестовая примерка для пользователей без баланса направляется в Telegram-бот `https://t.me/primerkakoles_bot`.
-- В кабинете основной блок содержит навигационные действия: `Примерить диски`, `Купить генерации`, `Мои примерки`. Покупка генераций пока заложена как будущая функция.
+- В кабинете основной блок содержит навигационные действия: `Примерить диски`, `Купить генерации`, `Мои примерки`. `Купить генерации` ведет на `/cabinet/buy`.
 
 ### Генерация
 
@@ -131,6 +131,7 @@ npm run preview
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
+- `VITE_PAYMENT_WEBHOOK_URL`
 - `VITE_EDGE_URL` - optional API/media proxy URL. Current production target: `https://api.primerkakoles.ru`.
 - `VITE_TELEGRAM_BOT_USERNAME` передается в GitHub Actions build, но по проверенному коду сейчас не используется.
 
@@ -154,6 +155,7 @@ npm run preview
 - `20260424_pr6_phone_column_trigger.sql` - добавляет `phone`, обновляет trigger создания пользователя.
 - `20260505_pr7_email_password_no_free_generations.sql` - обновляет trigger создания пользователя: новые пользователи получают `generations_limit = 0`.
 - `20260505_pr8_reset_web_starter_grants.sql` - обнуляет старый неиспользованный web-стартовый баланс `1 из 1`.
+- `20260508_pr9_web_generation_orders.sql` - добавляет `generation_orders`, RLS и RPC `credit_generation_order` для web-оплаты генераций.
 
 Критично при изменениях:
 
@@ -225,12 +227,13 @@ npm run preview
 
 ## Web-Оплата Генераций
 
-- Реализована frontend-заготовка покупки генераций для `/cabinet/buy`.
+- Реализована и протестирована web-покупка генераций для `/cabinet/buy`.
 - Тарифы web и Telegram единые:
   - `pack_1` - 1 генерация за 60 руб.
   - `pack_5` - 5 генераций за 199 руб.
   - `pack_10` - 10 генераций за 349 руб.
 - Frontend вызывает `VITE_PAYMENT_WEBHOOK_URL` и ожидает JSON `{ order_id, confirmation_url }`.
+- Frontend передает `customer_email` из Supabase Auth; он нужен ЮKassa для формирования чека.
 - После создания платежа пользователь перенаправляется на `confirmation_url` ЮKassa.
 - Возврат после оплаты идет на `/cabinet?payment=return`; кабинет перечитывает профиль и показывает статус проверки оплаты.
 - Баланс должен начисляться только серверно: n8n/Supabase RPC увеличивает `users.generations_limit`, `generations_used` не меняется.
@@ -241,3 +244,4 @@ npm run preview
   - browser-side update баланса в `public.users` закрывается через grant/revoke.
 - Добавлен импортируемый шаблон n8n без секретов: `n8n/primerka-web-payments.importable.json`.
 - Для production в текущей версии n8n без env нужно заменить placeholders в Code nodes: `ВСТАВЬ_SUPABASE_SERVICE_ROLE_KEY` и `ВСТАВЬ_СЕКРЕТНЫЙ_КЛЮЧ_ЮKASSA`.
+- Production smoke-test покупки прошел: создание платежа, переход на ЮKassa и возврат в кабинет работают.
