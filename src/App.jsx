@@ -8,6 +8,7 @@ import AuthCallbackPage from './pages/AuthCallbackPage.jsx'
 import BuyGenerationsPage from './pages/BuyGenerationsPage.jsx'
 import CabinetPage from './pages/CabinetPage.jsx'
 import SupportPage from './pages/SupportPage.jsx'
+import AdminPage from './pages/AdminPage.jsx'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/cabinet" element={<CabinetPage />} />
         <Route path="/cabinet/buy" element={<BuyGenerationsPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </BrowserRouter>
