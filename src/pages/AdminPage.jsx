@@ -8,10 +8,10 @@ import { supabase } from '../lib/supabase.js'
 
 const ADMIN_EMAILS = ['naydikolesa@yandex.ru', 'renatio@mail.ru']
 
-const VIEW_LABELS = {
-  result: 'Результат',
-  car: 'Авто',
-  wheel: 'Диск',
+const PHOTO_LABELS = {
+  result_url: 'Результат',
+  car_url: 'Авто',
+  wheel_url: 'Диск',
 }
 
 export default function AdminPage() {
@@ -25,15 +25,14 @@ export default function AdminPage() {
   const [users, setUsers] = useState([])
   const [generations, setGenerations] = useState([])
   const [orders, setOrders] = useState([])
+  const [meta, setMeta] = useState({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
-  const [previewView, setPreviewView] = useState('result')
   const [query, setQuery] = useState('')
   const [sourceFilter, setSourceFilter] = useState('all')
-  const [resultFilter, setResultFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('created_desc')
+  const [previewUrl, setPreviewUrl] = useState(null)
   const [limitDraft, setLimitDraft] = useState('')
   const [savingLimit, setSavingLimit] = useState(false)
   const [limitError, setLimitError] = useState(null)
@@ -51,14 +50,17 @@ export default function AdminPage() {
       setLoading(true)
       setError(null)
       try {
-        const data = await fetchAdminOverview()
+        const data = await fetchAdminDashboard()
         if (cancelled) return
         setUsers(data.users || [])
         setGenerations(data.generations || [])
         setOrders(data.orders || [])
+        setMeta(data.meta || {})
         setSelectedId(data.generations?.[0]?.id || null)
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Не удалось загрузить админку')
+        if (!cancelled) {
+          setError(err.message || 'Не удалось загрузить админку')
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -81,28 +83,23 @@ export default function AdminPage() {
   const orderStatsByUserId = useMemo(() => {
     const map = new Map()
     orders.forEach((order) => {
-      const key = order.user_id
-      if (!key) return
+      if (!order.user_id) return
       const stats =
-        map.get(key) ||
+        map.get(order.user_id) ||
         {
           orders: [],
-          succeededCount: 0,
-          succeededAmount: 0,
-          lastStatus: null,
+          count: 0,
+          lastOrder: null,
         }
       stats.orders.push(order)
-      if (order.status === 'succeeded') {
-        stats.succeededCount += 1
-        stats.succeededAmount += Number(order.amount_rub || 0)
-      }
+      stats.count += 1
       if (
-        !stats.lastStatus ||
-        new Date(order.created_at || 0) > new Date(stats.lastStatus.created_at || 0)
+        !stats.lastOrder ||
+        new Date(order.created_at || 0) > new Date(stats.lastOrder.created_at || 0)
       ) {
-        stats.lastStatus = order
+        stats.lastOrder = order
       }
-      map.set(key, stats)
+      map.set(order.user_id, stats)
     })
     return map
   }, [orders])
@@ -116,21 +113,20 @@ export default function AdminPage() {
       const stats = profile ? orderStatsByUserId.get(profile.id) : null
       const limit = Number(profile?.generations_limit || 0)
       const used = Number(profile?.generations_used || 0)
+      const hasPayment = Boolean(stats?.count)
+
       return {
         generation,
         profile,
         orders: stats?.orders || [],
-        succeededCount: stats?.succeededCount || 0,
-        succeededAmount: stats?.succeededAmount || 0,
-        lastOrder: stats?.lastStatus || null,
+        lastOrder: stats?.lastOrder || null,
+        hasPayment,
         left: Math.max(0, limit - used),
         displayName: getDisplayName(profile),
         searchText: [
           generation.id,
-          generation.auth_user_id,
           generation.chat_id,
           profile?.id,
-          profile?.auth_user_id,
           profile?.email,
           profile?.phone,
           profile?.username,
@@ -149,20 +145,15 @@ export default function AdminPage() {
       .filter((row) => !needle || row.searchText.includes(needle))
       .filter((row) => sourceFilter === 'all' || row.generation.source === sourceFilter)
       .filter((row) => {
-        if (resultFilter === 'all') return true
-        return resultFilter === 'with'
-          ? Boolean(row.generation.result_url)
-          : !row.generation.result_url
-      })
-      .filter((row) => {
         if (paymentFilter === 'all') return true
-        if (paymentFilter === 'failed') {
-          return ['failed', 'canceled'].includes(row.lastOrder?.status)
-        }
-        return row.lastOrder?.status === paymentFilter
+        return paymentFilter === 'yes' ? row.hasPayment : !row.hasPayment
       })
-      .sort((a, b) => sortRows(a, b, sortBy))
-  }, [paymentFilter, query, resultFilter, rows, sortBy, sourceFilter])
+      .sort(
+        (a, b) =>
+          new Date(b.generation.created_at || 0) -
+          new Date(a.generation.created_at || 0),
+      )
+  }, [paymentFilter, query, rows, sourceFilter])
 
   const selectedRow =
     filteredRows.find((row) => row.generation.id === selectedId) ||
@@ -171,7 +162,6 @@ export default function AdminPage() {
     null
 
   useEffect(() => {
-    setPreviewView('result')
     setLimitError(null)
     setLimitDraft(
       selectedRow?.profile?.generations_limit == null
@@ -180,15 +170,14 @@ export default function AdminPage() {
     )
   }, [selectedRow?.generation.id, selectedRow?.profile?.generations_limit])
 
-  const summary = useMemo(() => {
-    const paid = orders.filter((item) => item.status === 'succeeded')
-    return {
-      users: users.length,
-      generations: generations.length,
-      paidAmount: paid.reduce((sum, item) => sum + Number(item.amount_rub || 0), 0),
-      pending: orders.filter((item) => item.status === 'pending').length,
-    }
-  }, [generations.length, orders, users.length])
+  const summary = useMemo(
+    () => ({
+      users: meta.user_count ?? users.length,
+      generations: meta.generation_count ?? generations.length,
+      orders: meta.order_count ?? orders.length,
+    }),
+    [generations.length, meta, orders.length, users.length],
+  )
 
   const handleSaveLimit = async () => {
     if (!selectedRow?.profile) return
@@ -209,15 +198,10 @@ export default function AdminPage() {
           p_generations_limit: nextLimit,
         },
       )
-
-      if (updateError) {
-        throw updateError
-      }
+      if (updateError) throw updateError
 
       const updatedProfile = Array.isArray(updated) ? updated[0] : updated
-      if (!updatedProfile) {
-        throw new Error('Профиль не найден')
-      }
+      if (!updatedProfile) throw new Error('Профиль не найден')
 
       setUsers((current) =>
         current.map((item) =>
@@ -264,11 +248,10 @@ export default function AdminPage() {
               Примерки, пользователи, лимиты и оплаты
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-3 gap-2">
             <Metric label="Пользователи" value={summary.users} />
             <Metric label="Примерки" value={summary.generations} />
-            <Metric label="Оплачено" value={`${summary.paidAmount} ₽`} />
-            <Metric label="Pending" value={summary.pending} />
+            <Metric label="Оплаты" value={summary.orders} />
           </div>
         </div>
 
@@ -278,7 +261,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur md:grid-cols-5">
+        <div className="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur md:grid-cols-4">
           <label className="md:col-span-2">
             <span className="text-xs uppercase tracking-wider text-neutral-500">
               Поиск
@@ -295,94 +278,28 @@ export default function AdminPage() {
             <option value="web">web</option>
             <option value="telegram">telegram</option>
           </Select>
-          <Select label="Результат" value={resultFilter} onChange={setResultFilter}>
-            <option value="all">Все</option>
-            <option value="with">Есть фото</option>
-            <option value="without">Без фото</option>
-          </Select>
           <Select label="Оплата" value={paymentFilter} onChange={setPaymentFilter}>
             <option value="all">Все</option>
-            <option value="succeeded">succeeded</option>
-            <option value="pending">pending</option>
-            <option value="failed">failed/canceled</option>
-          </Select>
-          <Select label="Сортировка" value={sortBy} onChange={setSortBy}>
-            <option value="created_desc">Новые примерки</option>
-            <option value="created_asc">Старые примерки</option>
-            <option value="user_asc">Пользователь A-Z</option>
-            <option value="left_asc">Остаток меньше</option>
-            <option value="left_desc">Остаток больше</option>
+            <option value="yes">Да</option>
+            <option value="no">Нет</option>
           </Select>
         </div>
 
         {loading ? (
           <Loader />
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-            <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur">
-              <div className="hidden max-h-[72vh] overflow-auto lg:block">
-                <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-                  <thead className="sticky top-0 z-10 bg-neutral-950/95 text-xs uppercase tracking-wider text-neutral-500">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Фото</th>
-                      <th className="px-4 py-3 font-semibold">Время</th>
-                      <th className="px-4 py-3 font-semibold">Source</th>
-                      <th className="px-4 py-3 font-semibold">User id</th>
-                      <th className="px-4 py-3 font-semibold">Пользователь</th>
-                      <th className="px-4 py-3 font-semibold">Контакт</th>
-                      <th className="px-4 py-3 font-semibold">Баланс</th>
-                      <th className="px-4 py-3 font-semibold">Оплаты</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {filteredRows.map((row) => (
-                      <AdminTableRow
-                        key={row.generation.id}
-                        row={row}
-                        active={row.generation.id === selectedRow?.generation.id}
-                        onClick={() => setSelectedId(row.generation.id)}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="grid gap-3 p-3 lg:hidden">
-                {filteredRows.map((row) => (
-                  <button
-                    key={row.generation.id}
-                    type="button"
-                    onClick={() => setSelectedId(row.generation.id)}
-                    className={`rounded-xl border p-3 text-left transition ${
-                      row.generation.id === selectedRow?.generation.id
-                        ? 'border-orange-400/60 bg-orange-500/10'
-                        : 'border-white/10 bg-white/[0.03] hover:border-white/25'
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      <Thumb generation={row.generation} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium text-white">
-                          {row.displayName}
-                        </div>
-                        <div className="mt-1 text-xs text-neutral-400">
-                          {formatDateTime(row.generation.created_at)}
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                          <Badge>{row.generation.source || 'unknown'}</Badge>
-                          <Badge>
-                            {row.left} / {row.profile?.generations_limit ?? 0}
-                          </Badge>
-                          <Badge>{row.lastOrder?.status || 'без оплат'}</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_390px]">
+            <section className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredRows.map((row) => (
+                <GenerationCard
+                  key={row.generation.id}
+                  row={row}
+                  active={row.generation.id === selectedRow?.generation.id}
+                  onClick={() => setSelectedId(row.generation.id)}
+                />
+              ))}
               {!filteredRows.length && (
-                <div className="p-8 text-center text-sm text-neutral-400">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-neutral-400 sm:col-span-2 xl:col-span-3">
                   Ничего не найдено.
                 </div>
               )}
@@ -390,8 +307,7 @@ export default function AdminPage() {
 
             <AdminDetails
               row={selectedRow}
-              previewView={previewView}
-              setPreviewView={setPreviewView}
+              onPreview={setPreviewUrl}
               limitDraft={limitDraft}
               setLimitDraft={setLimitDraft}
               onSaveLimit={handleSaveLimit}
@@ -401,86 +317,76 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <img
+            src={previewUrl}
+            alt=""
+            className="max-h-[90vh] max-w-full rounded-xl"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      )}
     </Layout>
   )
 }
 
-async function fetchAdminOverview() {
-  const [usersResult, generationsResult, ordersResult] = await Promise.all([
-    supabase
-      .from('users')
-      .select(
-        'id, auth_user_id, email, phone, chat_id, first_name, username, generations_limit, generations_used, updated_at',
-      )
-      .order('updated_at', { ascending: false })
-      .limit(1000),
-    supabase
-      .from('generations')
-      .select('id, auth_user_id, chat_id, car_url, wheel_url, result_url, source, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1000),
-    supabase
-      .from('generation_orders')
-      .select(
-        'id, auth_user_id, user_id, package_code, generations_count, amount_rub, currency, status, yookassa_payment_id, credited_at, created_at, updated_at',
-      )
-      .order('created_at', { ascending: false })
-      .limit(1000),
-  ])
-
-  const error = usersResult.error || generationsResult.error || ordersResult.error
+async function fetchAdminDashboard() {
+  const { data, error } = await supabase.rpc('admin_get_dashboard')
   if (error) throw error
-
-  return {
-    users: usersResult.data || [],
-    generations: generationsResult.data || [],
-    orders: ordersResult.data || [],
-  }
+  return data || { users: [], generations: [], orders: [], meta: {} }
 }
 
-function AdminTableRow({ row, active, onClick }) {
+function GenerationCard({ row, active, onClick }) {
   const { generation, profile } = row
   return (
-    <tr
+    <button
+      type="button"
       onClick={onClick}
-      className={`cursor-pointer transition ${
-        active ? 'bg-orange-500/10' : 'hover:bg-white/[0.04]'
+      className={`overflow-hidden rounded-2xl border text-left transition ${
+        active
+          ? 'border-orange-400/70 bg-orange-500/10'
+          : 'border-white/10 bg-white/[0.03] hover:border-white/25'
       }`}
     >
-      <td className="px-4 py-3">
-        <Thumb generation={generation} />
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 text-neutral-300">
-        {formatDateTime(generation.created_at)}
-      </td>
-      <td className="px-4 py-3">
-        <Badge>{generation.source || 'unknown'}</Badge>
-      </td>
-      <td className="max-w-[150px] truncate px-4 py-3 font-mono text-xs text-neutral-400">
-        {profile?.id || generation.auth_user_id || generation.chat_id || '—'}
-      </td>
-      <td className="max-w-[180px] truncate px-4 py-3 text-white">
-        {row.displayName}
-      </td>
-      <td className="max-w-[180px] truncate px-4 py-3 text-neutral-400">
-        {profile?.email || profile?.phone || '—'}
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 text-neutral-300">
-        {row.left} доступно · {profile?.generations_used ?? 0} /{' '}
-        {profile?.generations_limit ?? 0}
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 text-neutral-300">
-        {row.succeededAmount} ₽ · {row.succeededCount} ·{' '}
-        {row.lastOrder?.status || '—'}
-      </td>
-    </tr>
+      <div className="grid grid-cols-3 gap-px bg-white/10">
+        {['result_url', 'car_url', 'wheel_url'].map((key) => (
+          <PhotoTile key={key} url={generation[key]} label={PHOTO_LABELS[key]} />
+        ))}
+      </div>
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold text-white">
+              {row.displayName}
+            </div>
+            <div className="mt-1 text-xs text-neutral-400">
+              {formatDateTime(generation.created_at)}
+            </div>
+          </div>
+          <Badge>{generation.source || 'unknown'}</Badge>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <InfoPill label="Лимит" value={`${row.left} / ${profile?.generations_limit ?? 0}`} />
+          <InfoPill label="Оплата" value={row.hasPayment ? 'Да' : 'Нет'} />
+        </div>
+
+        <div className="truncate text-xs text-neutral-500">
+          {profile?.email || profile?.phone || profile?.id || generation.id}
+        </div>
+      </div>
+    </button>
   )
 }
 
 function AdminDetails({
   row,
-  previewView,
-  setPreviewView,
+  onPreview,
   limitDraft,
   setLimitDraft,
   onSaveLimit,
@@ -496,38 +402,19 @@ function AdminDetails({
   }
 
   const { generation, profile, orders } = row
-  const activeUrl = toMediaUrl(generation[`${previewView}_url`])
 
   return (
-    <aside className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur lg:sticky lg:top-4 lg:max-h-[72vh] lg:overflow-auto">
-      <div className="overflow-hidden rounded-xl border border-white/10 bg-neutral-950">
-        {activeUrl ? (
-          <img
-            src={activeUrl}
-            alt={VIEW_LABELS[previewView]}
-            className="aspect-square w-full object-cover"
-          />
-        ) : (
-          <div className="flex aspect-square items-center justify-center text-sm text-neutral-500">
-            Нет изображения
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 flex gap-2 rounded-full border border-white/10 bg-white/5 p-1">
-        {['result', 'car', 'wheel'].map((key) => (
+    <aside className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur lg:sticky lg:top-4 lg:max-h-[76vh] lg:overflow-auto">
+      <div className="grid grid-cols-3 gap-2">
+        {['result_url', 'car_url', 'wheel_url'].map((key) => (
           <button
             key={key}
             type="button"
-            disabled={!generation[`${key}_url`]}
-            onClick={() => setPreviewView(key)}
-            className={`flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition disabled:cursor-not-allowed disabled:text-neutral-600 ${
-              previewView === key
-                ? 'bg-white text-neutral-950'
-                : 'text-neutral-300 hover:bg-white/10'
-            }`}
+            disabled={!generation[key]}
+            onClick={() => onPreview(toMediaUrl(generation[key]))}
+            className="overflow-hidden rounded-xl border border-white/10 bg-neutral-950 disabled:cursor-not-allowed"
           >
-            {VIEW_LABELS[key]}
+            <PhotoTile url={generation[key]} label={PHOTO_LABELS[key]} />
           </button>
         ))}
       </div>
@@ -536,7 +423,6 @@ function AdminDetails({
         <Detail label="generation id" value={generation.id} mono />
         <Detail label="created" value={formatDateTime(generation.created_at)} />
         <Detail label="source" value={generation.source || 'unknown'} />
-        <Detail label="auth_user_id" value={generation.auth_user_id || '—'} mono />
         <Detail label="chat_id" value={generation.chat_id || '—'} mono />
       </DetailBlock>
 
@@ -545,7 +431,7 @@ function AdminDetails({
         <Detail label="user id" value={profile?.id || '—'} mono />
         <Detail label="email" value={profile?.email || '—'} />
         <Detail label="phone" value={profile?.phone || '—'} />
-        <Detail label="username" value={profile?.username ? `@${profile.username}` : '—'} />
+        <UsernameDetail username={profile?.username} />
         <Detail label="updated" value={formatDateTime(profile?.updated_at)} />
       </DetailBlock>
 
@@ -584,7 +470,7 @@ function AdminDetails({
       <DetailBlock title="Оплаты">
         {orders.length ? (
           <div className="space-y-2">
-            {orders.slice(0, 10).map((order) => (
+            {orders.map((order) => (
               <div
                 key={order.id}
                 className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
@@ -609,6 +495,24 @@ function AdminDetails({
         )}
       </DetailBlock>
     </aside>
+  )
+}
+
+function UsernameDetail({ username }) {
+  const clean = username ? String(username).replace(/^@/, '') : ''
+  if (!clean) return <Detail label="username" value="—" />
+  return (
+    <div className="min-w-0 text-xs">
+      <div className="text-neutral-500">username</div>
+      <a
+        href={`https://t.me/${clean}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-0.5 inline-block break-all text-sky-300 transition hover:text-sky-200 hover:underline"
+      >
+        @{clean}
+      </a>
+    </div>
   )
 }
 
@@ -666,20 +570,37 @@ function Metric({ label, value }) {
   )
 }
 
-function Thumb({ generation }) {
-  const url = toMediaUrl(generation.result_url || generation.car_url || generation.wheel_url)
-  if (!url) {
-    return (
-      <div className="h-14 w-14 rounded-xl border border-white/10 bg-white/5" />
-    )
-  }
+function InfoPill({ label, value }) {
   return (
-    <img
-      src={url}
-      alt=""
-      className="h-14 w-14 rounded-xl object-cover"
-      loading="lazy"
-    />
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-neutral-500">
+        {label}
+      </div>
+      <div className="mt-1 truncate font-medium text-neutral-100">{value}</div>
+    </div>
+  )
+}
+
+function PhotoTile({ url, label }) {
+  const mediaUrl = toMediaUrl(url)
+  return (
+    <div className="relative aspect-square bg-neutral-900">
+      {mediaUrl ? (
+        <img
+          src={mediaUrl}
+          alt={label}
+          className="h-full w-full object-cover"
+          loading="lazy"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center text-[11px] text-neutral-600">
+          Нет фото
+        </div>
+      )}
+      <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
+        {label}
+      </span>
+    </div>
   )
 }
 
@@ -710,18 +631,6 @@ function getDisplayName(profile) {
     profile.id ||
     'Без имени'
   )
-}
-
-function sortRows(a, b, sortBy) {
-  if (sortBy === 'created_asc') {
-    return new Date(a.generation.created_at || 0) - new Date(b.generation.created_at || 0)
-  }
-  if (sortBy === 'user_asc') {
-    return a.displayName.localeCompare(b.displayName, 'ru')
-  }
-  if (sortBy === 'left_asc') return a.left - b.left
-  if (sortBy === 'left_desc') return b.left - a.left
-  return new Date(b.generation.created_at || 0) - new Date(a.generation.created_at || 0)
 }
 
 function formatDateTime(iso) {

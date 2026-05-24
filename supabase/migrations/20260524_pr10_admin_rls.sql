@@ -37,6 +37,7 @@ set search_path = public
 as $$
 declare
   v_used integer;
+  v_user public.users%rowtype;
 begin
   if not public.is_admin_user() then
     raise exception 'admin access required' using errcode = '42501';
@@ -61,13 +62,14 @@ begin
       using errcode = '22023';
   end if;
 
-  return query
   update public.users u
   set
     generations_limit = p_generations_limit,
     updated_at = now()
   where u.id = p_user_id
-  returning u.*;
+  returning u.* into v_user;
+
+  return v_user;
 end;
 $$;
 
