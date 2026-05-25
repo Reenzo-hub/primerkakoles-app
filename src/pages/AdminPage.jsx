@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [sourceFilter, setSourceFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false)
   const [limitDraft, setLimitDraft] = useState('')
   const [savingLimit, setSavingLimit] = useState(false)
   const [limitError, setLimitError] = useState(null)
@@ -179,6 +180,11 @@ export default function AdminPage() {
     [generations.length, meta, orders.length, users.length],
   )
 
+  const selectRow = (id) => {
+    setSelectedId(id)
+    setMobileDetailsOpen(true)
+  }
+
   const handleSaveLimit = async () => {
     if (!selectedRow?.profile) return
     const nextLimit = Number(limitDraft)
@@ -295,7 +301,7 @@ export default function AdminPage() {
                   key={row.generation.id}
                   row={row}
                   active={row.generation.id === selectedRow?.generation.id}
-                  onClick={() => setSelectedId(row.generation.id)}
+                  onClick={() => selectRow(row.generation.id)}
                 />
               ))}
               {!filteredRows.length && (
@@ -308,6 +314,7 @@ export default function AdminPage() {
             <AdminDetails
               row={selectedRow}
               onPreview={setPreviewUrl}
+              className="hidden lg:block lg:sticky lg:top-0 lg:min-h-screen"
               limitDraft={limitDraft}
               setLimitDraft={setLimitDraft}
               onSaveLimit={handleSaveLimit}
@@ -317,6 +324,43 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {mobileDetailsOpen && selectedRow && (
+        <div className="fixed inset-0 z-40 bg-black/80 p-3 backdrop-blur-sm lg:hidden">
+          <div className="mx-auto flex h-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-white">
+                  {selectedRow.displayName}
+                </div>
+                <div className="text-xs text-neutral-500">
+                  {formatDateTime(selectedRow.generation.created_at)}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileDetailsOpen(false)}
+                className="ml-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg leading-none text-white"
+                aria-label="Закрыть"
+              >
+                ×
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <AdminDetails
+                row={selectedRow}
+                onPreview={setPreviewUrl}
+                className="border-0 bg-transparent p-0"
+                limitDraft={limitDraft}
+                setLimitDraft={setLimitDraft}
+                onSaveLimit={handleSaveLimit}
+                savingLimit={savingLimit}
+                limitError={limitError}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {previewUrl && (
         <div
@@ -387,6 +431,7 @@ function GenerationCard({ row, active, onClick }) {
 function AdminDetails({
   row,
   onPreview,
+  className = '',
   limitDraft,
   setLimitDraft,
   onSaveLimit,
@@ -395,7 +440,9 @@ function AdminDetails({
 }) {
   if (!row) {
     return (
-      <aside className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-neutral-400">
+      <aside
+        className={`rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-neutral-400 ${className}`}
+      >
         Выберите примерку.
       </aside>
     )
@@ -404,7 +451,9 @@ function AdminDetails({
   const { generation, profile, orders } = row
 
   return (
-    <aside className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur lg:sticky lg:top-4 lg:max-h-[76vh] lg:overflow-auto">
+    <aside
+      className={`rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur ${className}`}
+    >
       <div className="grid grid-cols-3 gap-2">
         {['result_url', 'car_url', 'wheel_url'].map((key) => (
           <button
