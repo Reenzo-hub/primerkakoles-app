@@ -417,17 +417,24 @@ function GenerationCard({ row, active, onClick }) {
           <Badge>{generation.source || 'unknown'}</Badge>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <InfoPill label="Осталось" value={row.left} />
-          <InfoPill label="Исп." value={profile?.generations_used ?? 0} />
-          <InfoPill label="Лимит" value={profile?.generations_limit ?? 0} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 text-xs">
-          <InfoPill
-            label="Оплата"
-            value={row.hasPayment ? (row.hasPlanPayment ? 'Да · plan' : 'Да') : 'Нет'}
-          />
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-neutral-500">
+              Лимит
+            </div>
+            <div className="mt-1 font-semibold text-white">
+              {profile?.generations_used ?? 0}/{profile?.generations_limit ?? 0}
+            </div>
+          </div>
+          {row.hasPayment && (
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white"
+              title={row.hasPlanPayment ? 'Оплата: plan starter' : 'Оплата есть'}
+              aria-label="Оплата есть"
+            >
+              ✓
+            </span>
+          )}
         </div>
 
         <div className="truncate text-xs text-neutral-500">
@@ -631,17 +638,6 @@ function Metric({ label, value }) {
         {label}
       </div>
       <div className="mt-1 text-base font-semibold text-white">{value}</div>
-    </div>
-  )
-}
-
-function InfoPill({ label, value }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-neutral-500">
-        {label}
-      </div>
-      <div className="mt-1 truncate font-medium text-neutral-100">{value}</div>
     </div>
   )
 }
