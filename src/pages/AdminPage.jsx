@@ -424,7 +424,10 @@ function GenerationCard({ row, active, onClick }) {
         </div>
 
         <div className="grid grid-cols-1 gap-2 text-xs">
-          <InfoPill label="Оплата" value={row.hasPayment ? 'Да' : 'Нет'} />
+          <InfoPill
+            label="Оплата"
+            value={row.hasPayment ? (row.hasPlanPayment ? 'Да · plan' : 'Да') : 'Нет'}
+          />
         </div>
 
         <div className="truncate text-xs text-neutral-500">
