@@ -50,6 +50,7 @@ begin
       chat_id,
       first_name,
       username,
+      plan,
       generations_limit,
       generations_used,
       updated_at

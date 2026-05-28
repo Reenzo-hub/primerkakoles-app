@@ -114,7 +114,8 @@ export default function AdminPage() {
       const stats = profile ? orderStatsByUserId.get(profile.id) : null
       const limit = Number(profile?.generations_limit || 0)
       const used = Number(profile?.generations_used || 0)
-      const hasPayment = Boolean(stats?.count)
+      const hasPlanPayment = String(profile?.plan || '').toLowerCase() === 'starter'
+      const hasPayment = Boolean(stats?.count || hasPlanPayment)
 
       return {
         generation,
@@ -122,6 +123,7 @@ export default function AdminPage() {
         orders: stats?.orders || [],
         lastOrder: stats?.lastOrder || null,
         hasPayment,
+        hasPlanPayment,
         left: Math.max(0, limit - used),
         displayName: getDisplayName(profile),
         searchText: [
@@ -486,6 +488,7 @@ function AdminDetails({
         <Detail label="email" value={profile?.email || '—'} />
         <Detail label="phone" value={profile?.phone || '—'} />
         <UsernameDetail username={profile?.username} />
+        <Detail label="plan" value={profile?.plan || '—'} />
         <Detail label="updated" value={formatDateTime(profile?.updated_at)} />
       </DetailBlock>
 
@@ -522,6 +525,11 @@ function AdminDetails({
       </DetailBlock>
 
       <DetailBlock title="Оплаты">
+        {row.hasPlanPayment && (
+          <div className="mb-2 rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">
+            Покупка отмечена в профиле: plan = starter
+          </div>
+        )}
         {orders.length ? (
           <div className="space-y-2">
             {orders.map((order) => (
