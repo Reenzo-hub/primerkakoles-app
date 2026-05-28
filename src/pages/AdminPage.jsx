@@ -415,8 +415,13 @@ function GenerationCard({ row, active, onClick }) {
           <Badge>{generation.source || 'unknown'}</Badge>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <InfoPill label="Лимит" value={`${row.left} / ${profile?.generations_limit ?? 0}`} />
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <InfoPill label="Осталось" value={row.left} />
+          <InfoPill label="Исп." value={profile?.generations_used ?? 0} />
+          <InfoPill label="Лимит" value={profile?.generations_limit ?? 0} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 text-xs">
           <InfoPill label="Оплата" value={row.hasPayment ? 'Да' : 'Нет'} />
         </div>
 
