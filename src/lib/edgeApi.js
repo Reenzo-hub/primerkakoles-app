@@ -4,7 +4,10 @@ const configuredEdgeUrl = (import.meta.env.VITE_EDGE_URL || '').replace(/\/$/, '
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '')
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-export async function fetchEdgeJson(path, { auth = false } = {}) {
+export async function fetchEdgeJson(
+  path,
+  { auth = false, method = 'GET', body = null } = {},
+) {
   const edgeUrl = getEdgeUrl()
   if (edgeUrl == null) {
     throw new Error('Edge API is not configured')
@@ -15,8 +18,13 @@ export async function fetchEdgeJson(path, { auth = false } = {}) {
     apikey: supabaseAnonKey,
     Authorization: `Bearer ${token || supabaseAnonKey}`,
   }
+  if (body != null) headers['Content-Type'] = 'application/json'
 
-  const response = await fetch(`${edgeUrl}${path}`, { headers })
+  const response = await fetch(`${edgeUrl}${path}`, {
+    method,
+    headers,
+    body: body == null ? null : JSON.stringify(body),
+  })
   if (!response.ok) {
     throw new Error(`Edge request failed: ${response.status}`)
   }

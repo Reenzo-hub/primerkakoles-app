@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
-import { toMediaUrl } from '../lib/edgeApi.js'
+import { fetchEdgeJson, toMediaUrl } from '../lib/edgeApi.js'
 import { useAuth } from '../lib/useAuth.js'
 import { useSeo } from '../lib/useSeo.js'
 import { supabase } from '../lib/supabase.js'
@@ -199,14 +199,13 @@ export default function AdminPage() {
     setSavingLimit(true)
     setLimitError(null)
     try {
-      const { data: updated, error: updateError } = await supabase.rpc(
+      const updated = await callAdminRpc(
         'admin_update_user_generation_limit',
         {
           p_user_id: selectedRow.profile.id,
           p_generations_limit: nextLimit,
         },
       )
-      if (updateError) throw updateError
 
       const updatedProfile = Array.isArray(updated) ? updated[0] : updated
       if (!updatedProfile) throw new Error('Профиль не найден')
@@ -382,9 +381,22 @@ export default function AdminPage() {
 }
 
 async function fetchAdminDashboard() {
-  const { data, error } = await supabase.rpc('admin_get_dashboard')
-  if (error) throw error
+  const data = await callAdminRpc('admin_get_dashboard')
   return data || { users: [], generations: [], orders: [], meta: {} }
+}
+
+async function callAdminRpc(name, params = {}) {
+  try {
+    return await fetchEdgeJson(`/rest/rpc/${name}`, {
+      auth: true,
+      method: 'POST',
+      body: params,
+    })
+  } catch {
+    const { data, error } = await supabase.rpc(name, params)
+    if (error) throw error
+    return data
+  }
 }
 
 function GenerationCard({ row, active, onClick }) {
