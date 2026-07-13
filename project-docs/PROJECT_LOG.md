@@ -4,6 +4,15 @@
 
 Правило ведения: сюда добавляем только то, что уже сделано, проверено или принято как решение. Планы и будущие задачи ведем в `project-docs/ROADMAP.md`.
 
+## 2026-06-16
+
+### No Free Web Generations
+
+- Добавлена миграция `20260616_pr13_no_free_generations_signup.sql`.
+- Миграция повторно заменяет `public.handle_new_auth_user()`: новые Supabase Auth пользователи получают `generations_limit = 0`, `generations_used = 0`.
+- Миграция заново создает trigger `on_auth_user_created` на `auth.users`, чтобы production не мог остаться на старой логике `1 бесплатная генерация`.
+- Миграция снимает неиспользованный web-стартовый баланс `1 из 1` у пользователей с `auth_user_id`, если `generations_used = 0`.
+
 ## 2026-05-08
 
 ### Web-Оплата Генераций

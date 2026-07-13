@@ -156,6 +156,7 @@ npm run preview
 - `20260505_pr7_email_password_no_free_generations.sql` - обновляет trigger создания пользователя: новые пользователи получают `generations_limit = 0`.
 - `20260505_pr8_reset_web_starter_grants.sql` - обнуляет старый неиспользованный web-стартовый баланс `1 из 1`.
 - `20260508_pr9_web_generation_orders.sql` - добавляет `generation_orders`, RLS и RPC `credit_generation_order` для web-оплаты генераций.
+- `20260616_pr13_no_free_generations_signup.sql` - повторно закрепляет `generations_limit = 0` для новых web-регистраций и снимает неиспользованный стартовый баланс `1 из 1`.
 
 Критично при изменениях:
 
