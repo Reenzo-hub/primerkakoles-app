@@ -2,9 +2,13 @@ node_modules
 dist
 dist-ssr
 .vite
+.npm-cache
 .env
 .env.local
 .env.*.local
 .DS_Store
 *.log
 .vercel
+
+# Local n8n exports can contain embedded bot/API tokens.
+n8n/Primerka-cloud*.json

@@ -63,6 +63,8 @@ npm run preview
 - `/login` - регистрация и вход по email/password.
 - `/auth/callback` - callback авторизации.
 - `/cabinet` - личный кабинет.
+- `/cabinet/buy` - покупка web-генераций.
+- `/admin` - скрытая рабочая страница для разрешенных администраторов.
 - `/support` - страница поддержки.
 - `*` - fallback на главную страницу.
 
@@ -132,6 +134,7 @@ npm run preview
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
 - `VITE_PAYMENT_WEBHOOK_URL`
+- `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`
 - `VITE_EDGE_URL` - optional API/media proxy URL. Current production target: `https://api.primerkakoles.ru`.
 - `VITE_TELEGRAM_BOT_USERNAME` передается в GitHub Actions build, но по проверенному коду сейчас не используется.
 
@@ -156,7 +159,11 @@ npm run preview
 - `20260505_pr7_email_password_no_free_generations.sql` - обновляет trigger создания пользователя: новые пользователи получают `generations_limit = 0`.
 - `20260505_pr8_reset_web_starter_grants.sql` - обнуляет старый неиспользованный web-стартовый баланс `1 из 1`.
 - `20260508_pr9_web_generation_orders.sql` - добавляет `generation_orders`, RLS и RPC `credit_generation_order` для web-оплаты генераций.
+- `20260524_pr10_admin_rls.sql` - добавляет RLS/RPC-доступ для администраторов.
+- `20260524_pr11_admin_dashboard_rpc.sql` - добавляет единый RPC админ-панели и изменение лимита пользователя.
+- `20260528_pr12_admin_dashboard_plan.sql` - добавляет поле `plan` в данные админ-панели.
 - `20260616_pr13_no_free_generations_signup.sql` - повторно закрепляет `generations_limit = 0` для новых web-регистраций и снимает неиспользованный стартовый баланс `1 из 1`.
+- `20260903_pr14_admin_telegram_recipient.sql` - разрешает только администраторам получать Telegram `chat_id` выбранного пользователя через защищенную RPC.
 
 Критично при изменениях:
 
@@ -246,3 +253,23 @@ npm run preview
 - Добавлен импортируемый шаблон n8n без секретов: `n8n/primerka-web-payments.importable.json`.
 - Для production в текущей версии n8n без env нужно заменить placeholders в Code nodes: `ВСТАВЬ_SUPABASE_SERVICE_ROLE_KEY` и `ВСТАВЬ_СЕКРЕТНЫЙ_КЛЮЧ_ЮKASSA`.
 - Production smoke-test покупки прошел: создание платежа, переход на ЮKassa и возврат в кабинет работают.
+
+## Админка И Персональные Сообщения
+
+- `/admin` доступен только после Supabase Auth для `naydikolesa@yandex.ru` и `renatio@mail.ru`; публичной ссылки на маршрут нет.
+- Данные пользователей, генераций, лимитов, планов и web-оплат загружаются через admin RPC, а лимит меняется отдельной admin RPC.
+- Для Telegram в сайдбаре выбранной Telegram-примерки есть поле персонального сообщения.
+- Frontend отправляет на `VITE_ADMIN_TELEGRAM_WEBHOOK_URL` только `user_id` и текст вместе с текущим Supabase access token.
+- n8n вызывает `admin_get_telegram_recipient` с этим JWT. RPC повторно проверяет email администратора и возвращает `chat_id`; переданный браузером `chat_id` не принимается.
+- После проверки n8n отправляет текст через credential `Telegram primerka`. Bot token не хранится во frontend и не входит в импортируемый JSON.
+- Шаблон: `n8n/primerka-admin-telegram.importable.json`. В Code node нужно заменить только placeholder `ВСТАВЬ_SUPABASE_ANON_KEY`, выбрать Telegram credential при необходимости и активировать workflow.
+- Отдельная таблица истории сообщений на первом этапе не создается. Успешная отправка подтверждается ответом Telegram, но после перезагрузки админки журнал отправок не показывается.
+- Локальные экспорты `n8n/Primerka-cloud*.json` игнорируются Git, потому что текущий рабочий export может содержать встроенные секреты.
+
+Порядок включения в production:
+
+1. Выполнить `supabase/migrations/20260903_pr14_admin_telegram_recipient.sql` в Supabase SQL Editor.
+2. Импортировать `n8n/primerka-admin-telegram.importable.json`, заменить placeholder anon key и проверить credential `Telegram primerka` в Telegram node.
+3. Активировать workflow и скопировать его Production URL; стандартный путь оканчивается на `/webhook/admin-messages/telegram`.
+4. Создать GitHub Actions Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL` со скопированным Production URL и заново запустить deploy.
+5. Проверить успешную отправку от обоих администраторов и отказ для обычного аккаунта.

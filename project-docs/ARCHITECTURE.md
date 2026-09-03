@@ -36,6 +36,8 @@ flowchart LR
   - `/my` - личные примерки пользователя.
   - `/login` - регистрация и вход по email/password.
   - `/cabinet` - личный кабинет.
+  - `/cabinet/buy` - покупка web-генераций.
+  - `/admin` - скрытая админ-панель.
   - `/support` - поддержка.
 
 ### Supabase
@@ -175,6 +177,7 @@ Frontend env:
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_WEBHOOK_URL`
 - `VITE_PAYMENT_WEBHOOK_URL`
+- `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`
 - `VITE_EDGE_URL`
 
 Production:
@@ -244,3 +247,24 @@ flowchart LR
 - `generations_used` остается счетчиком фактических генераций и не меняется при покупке.
 - Рабочий Telegram workflow не меняется; для web добавлен отдельный шаблон `n8n/primerka-web-payments.importable.json`.
 - ЮKassa требует email или телефон покупателя для чека. Текущий web-сценарий передает email из Supabase Auth как `customer_email`; n8n валидирует его до создания платежа.
+
+## Админка И Telegram-Сообщения
+
+```mermaid
+flowchart LR
+  admin["/admin<br/>React SPA"] --> webhook["n8n webhook<br/>admin-messages/telegram"]
+  webhook --> rpc["Supabase RPC<br/>admin_get_telegram_recipient"]
+  rpc --> check["is_admin_user()<br/>JWT email check"]
+  rpc --> users["users.chat_id"]
+  webhook --> telegram["Telegram Bot API<br/>Telegram primerka credential"]
+```
+
+- Разрешенные администраторы: `naydikolesa@yandex.ru` и `renatio@mail.ru`.
+- Frontend отправляет `user_id`, текст и Supabase access token. `chat_id` из браузера не принимается.
+- `admin_get_telegram_recipient` является `security definer`, но до чтения `users.chat_id` обязательно вызывает `is_admin_user()`.
+- n8n получает `chat_id` только после серверной проверки JWT и отправляет текст через существующий Telegram credential.
+- Bot token остается в credential store n8n. Во frontend допустимы только URL webhook и публичный Supabase anon key.
+- Импортируемый шаблон без секретов: `n8n/primerka-admin-telegram.importable.json`.
+- Первый этап не хранит историю сообщений в отдельной таблице. Это сознательное упрощение: есть ответ об успехе текущей отправки, но нет аудита и повторного просмотра истории.
+- Актуальный полный export Telegram workflow хранится только локально и игнорируется по маске `n8n/Primerka-cloud*.json`, поскольку export может содержать реальные credentials и токены.
+- Для production сначала применяется миграция `20260903_pr14_admin_telegram_recipient.sql`, затем активируется импортированный workflow. Его Production URL, обычно оканчивающийся на `/webhook/admin-messages/telegram`, передается в GitHub Actions Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`; после изменения секрета требуется новый deploy GitHub Pages.

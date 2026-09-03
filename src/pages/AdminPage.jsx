@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
+import { sendAdminTelegramMessage } from '../lib/adminTelegram.js'
 import { fetchEdgeJson, toMediaUrl } from '../lib/edgeApi.js'
 import { useAuth } from '../lib/useAuth.js'
 import { useSeo } from '../lib/useSeo.js'
@@ -37,6 +38,9 @@ export default function AdminPage() {
   const [limitDraft, setLimitDraft] = useState('')
   const [savingLimit, setSavingLimit] = useState(false)
   const [limitError, setLimitError] = useState(null)
+  const [telegramMessage, setTelegramMessage] = useState('')
+  const [sendingTelegram, setSendingTelegram] = useState(false)
+  const [telegramNotice, setTelegramNotice] = useState(null)
 
   const isAdmin = ADMIN_EMAILS.includes((user?.email || '').toLowerCase())
 
@@ -166,6 +170,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     setLimitError(null)
+    setTelegramMessage('')
+    setTelegramNotice(null)
     setLimitDraft(
       selectedRow?.profile?.generations_limit == null
         ? ''
@@ -219,6 +225,38 @@ export default function AdminPage() {
       setLimitError(err.message || 'Не удалось сохранить лимит')
     } finally {
       setSavingLimit(false)
+    }
+  }
+
+  const handleSendTelegram = async () => {
+    if (!selectedRow?.profile?.id) return
+
+    const text = telegramMessage.trim()
+    if (!text) {
+      setTelegramNotice({ type: 'error', text: 'Введите сообщение' })
+      return
+    }
+
+    setSendingTelegram(true)
+    setTelegramNotice(null)
+    try {
+      await sendAdminTelegramMessage({
+        userId: selectedRow.profile.id,
+        message: text,
+      })
+      setTelegramMessage('')
+      setTelegramNotice({
+        type: 'success',
+        text: 'Сообщение отправлено в Telegram',
+      })
+    } catch (err) {
+      const message =
+        err?.message === 'Failed to fetch'
+          ? 'Не удалось связаться с сервисом отправки'
+          : err?.message || 'Не удалось отправить сообщение'
+      setTelegramNotice({ type: 'error', text: message })
+    } finally {
+      setSendingTelegram(false)
     }
   }
 
@@ -321,6 +359,12 @@ export default function AdminPage() {
               onSaveLimit={handleSaveLimit}
               savingLimit={savingLimit}
               limitError={limitError}
+              telegramMessage={telegramMessage}
+              setTelegramMessage={setTelegramMessage}
+              setTelegramNotice={setTelegramNotice}
+              onSendTelegram={handleSendTelegram}
+              sendingTelegram={sendingTelegram}
+              telegramNotice={telegramNotice}
             />
           </div>
         )}
@@ -357,6 +401,12 @@ export default function AdminPage() {
                 onSaveLimit={handleSaveLimit}
                 savingLimit={savingLimit}
                 limitError={limitError}
+                telegramMessage={telegramMessage}
+                setTelegramMessage={setTelegramMessage}
+                setTelegramNotice={setTelegramNotice}
+                onSendTelegram={handleSendTelegram}
+                sendingTelegram={sendingTelegram}
+                telegramNotice={telegramNotice}
               />
             </div>
           </div>
@@ -466,6 +516,12 @@ function AdminDetails({
   onSaveLimit,
   savingLimit,
   limitError,
+  telegramMessage,
+  setTelegramMessage,
+  setTelegramNotice,
+  onSendTelegram,
+  sendingTelegram,
+  telegramNotice,
 }) {
   if (!row) {
     return (
@@ -513,6 +569,54 @@ function AdminDetails({
         <Detail label="plan" value={profile?.plan || '—'} />
         <Detail label="updated" value={formatDateTime(profile?.updated_at)} />
       </DetailBlock>
+
+      {isTelegramGeneration(generation) && (
+        <DetailBlock title="Сообщение в Telegram">
+          {profile?.chat_id ? (
+            <div>
+              <textarea
+                value={telegramMessage}
+                onChange={(event) => {
+                  setTelegramMessage(event.target.value)
+                  setTelegramNotice(null)
+                }}
+                maxLength={4096}
+                rows={5}
+                placeholder="Введите персональное сообщение"
+                className="w-full resize-y rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-sky-400/60"
+              />
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="text-xs text-neutral-500">
+                  {telegramMessage.length}/4096
+                </span>
+                <button
+                  type="button"
+                  onClick={onSendTelegram}
+                  disabled={sendingTelegram || !telegramMessage.trim()}
+                  className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
+                >
+                  {sendingTelegram ? 'Отправляем...' : 'Отправить'}
+                </button>
+              </div>
+              {telegramNotice && (
+                <p
+                  className={`mt-3 rounded-xl border p-3 text-xs ${
+                    telegramNotice.type === 'success'
+                      ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100'
+                      : 'border-red-400/20 bg-red-500/10 text-red-200'
+                  }`}
+                >
+                  {telegramNotice.text}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-neutral-500">
+              У пользователя нет Telegram chat_id.
+            </p>
+          )}
+        </DetailBlock>
+      )}
 
       <DetailBlock title="Лимиты">
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -703,6 +807,13 @@ function getDisplayName(profile) {
     profile.chat_id ||
     profile.id ||
     'Без имени'
+  )
+}
+
+function isTelegramGeneration(generation) {
+  return (
+    String(generation?.source || '').toLowerCase() === 'telegram' ||
+    generation?.chat_id != null
   )
 }
 

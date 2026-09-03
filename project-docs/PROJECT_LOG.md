@@ -4,6 +4,18 @@
 
 Правило ведения: сюда добавляем только то, что уже сделано, проверено или принято как решение. Планы и будущие задачи ведем в `project-docs/ROADMAP.md`.
 
+## 2026-09-03
+
+### Персональные Telegram-Сообщения Из Админки
+
+- В детальную панель Telegram-примерки на `/admin` добавлены поле сообщения, счетчик до 4096 символов, отправка и понятные состояния успеха/ошибки.
+- Frontend отправляет только `user_id` и текст на `VITE_ADMIN_TELEGRAM_WEBHOOK_URL` с Supabase access token администратора.
+- Добавлена миграция `20260903_pr14_admin_telegram_recipient.sql`: RPC `admin_get_telegram_recipient` повторно проверяет администратора и серверно получает `users.chat_id`.
+- Добавлен безопасный импортируемый n8n workflow `n8n/primerka-admin-telegram.importable.json`, использующий существующий credential `Telegram primerka`.
+- История сообщений отдельно не сохраняется; это принятое ограничение первого этапа.
+- Актуальные локальные экспорты `n8n/Primerka-cloud*.json` исключены из Git, поскольку могут содержать реальные токены.
+- GitHub Pages build получает URL нового webhook из GitHub Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`.
+
 ## 2026-06-16
 
 ### No Free Web Generations
