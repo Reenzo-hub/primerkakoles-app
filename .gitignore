@@ -10,5 +10,10 @@ dist-ssr
 *.log
 .vercel
 
-# Local n8n exports can contain embedded bot/API tokens.
-n8n/Primerka-cloud*.json
+# Private local project material. These folders are not required by GitHub Pages.
+/project-docs/
+/n8n/
+/supabase/
+/cloudflare/
+/.env.example
+/vercel.json.bak

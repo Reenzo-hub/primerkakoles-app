@@ -38,8 +38,16 @@ export async function sendAdminMaxMessage({ userId, message }) {
     payload?.ok === false ||
     payload?.ready === false
   ) {
+    const diagnosticMessage = String(payload?.diagnostic?.max_message || '')
+    const isCertificateError =
+      /unable to get local issuer certificate/i.test(diagnosticMessage) ||
+      /unable_to_get_issuer_cert_locally/i.test(diagnosticMessage)
+
     throw new Error(
-      payload?.error || `Не удалось отправить сообщение. Код: ${response.status}`,
+      isCertificateError
+        ? 'На сервере n8n не настроен доверенный сертификат Минцифры для MAX'
+        : payload?.error ||
+            `Не удалось отправить сообщение. Код: ${response.status}`,
     )
   }
 
