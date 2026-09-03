@@ -178,6 +178,7 @@ Frontend env:
 - `VITE_WEBHOOK_URL`
 - `VITE_PAYMENT_WEBHOOK_URL`
 - `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`
+- `VITE_ADMIN_MAX_WEBHOOK_URL`
 - `VITE_EDGE_URL`
 
 Production:
@@ -267,4 +268,23 @@ flowchart LR
 - Импортируемый шаблон без секретов: `n8n/primerka-admin-telegram.importable.json`.
 - Первый этап не хранит историю сообщений в отдельной таблице. Это сознательное упрощение: есть ответ об успехе текущей отправки, но нет аудита и повторного просмотра истории.
 - Актуальный полный export Telegram workflow хранится только локально и игнорируется по маске `n8n/Primerka-cloud*.json`, поскольку export может содержать реальные credentials и токены.
-- Для production сначала применяется миграция `20260903_pr14_admin_telegram_recipient.sql`, затем активируется импортированный workflow. Его Production URL, обычно оканчивающийся на `/webhook/admin-messages/telegram`, передается в GitHub Actions Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`; после изменения секрета требуется новый deploy GitHub Pages.
+- Для production применяются миграции `20260903_pr14_admin_telegram_recipient.sql` и `20260903_pr15_admin_telegram_recipient_json.sql`, затем активируется импортированный workflow. PR15 возвращает данные как `jsonb`, поэтому RPC не зависит от legacy-типа `users.chat_id`. Production URL workflow, обычно оканчивающийся на `/webhook/admin-messages/telegram`, передается в GitHub Actions Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`; после изменения секрета требуется новый deploy GitHub Pages.
+
+### MAX
+
+```mermaid
+flowchart LR
+  admin["/admin<br/>React SPA"] --> webhook["n8n webhook<br/>admin-messages/max"]
+  webhook --> rpc["Supabase RPC<br/>admin_get_max_recipient"]
+  rpc --> check["is_admin_user()<br/>JWT email check"]
+  rpc --> users["users.chat_id<br/>MAX user id"]
+  webhook --> maxapi["MAX Bot API<br/>POST /messages?user_id"]
+```
+
+- Канал определяется по `generations.source`; значения, начинающиеся с `max`, и значение `макс` считаются MAX. Такие записи больше не попадают под Telegram fallback по одному наличию `chat_id`.
+- Отдельного поля MAX пока нет: существующий `users.chat_id` содержит идентификатор пользователя соответствующего бота.
+- `admin_get_max_recipient` принимает внутренний UUID профиля, повторно проверяет администратора и возвращает MAX user id как строку.
+- n8n обращается к `https://platform-api2.max.ru/messages` с query-параметром `user_id`; MAX bot token передается в заголовке `Authorization` и хранится только в n8n.
+- Импортируемый шаблон без секретов: `n8n/primerka-admin-max.importable.json`.
+- URL workflow передается frontend через GitHub Secret `VITE_ADMIN_MAX_WEBHOOK_URL`.
+- MAX допускает до 4000 символов в тексте сообщения; ограничение проверяется и во frontend, и в n8n.

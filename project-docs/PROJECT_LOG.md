@@ -16,6 +16,17 @@
 - Актуальные локальные экспорты `n8n/Primerka-cloud*.json` исключены из Git, поскольку могут содержать реальные токены.
 - GitHub Pages build получает URL нового webhook из GitHub Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`.
 - Исправлена обработка ошибок отправки: frontend учитывает внутренние `statusCode` и `ready`, а HTTP Response Code n8n задается в `Respond to Webhook -> Options`.
+- После production-диагностики PostgREST `400` добавлена миграция `20260903_pr15_admin_telegram_recipient_json.sql`: RPC возвращает `jsonb` и больше не зависит от фактического legacy-типа `users.chat_id`.
+- Пользователь подтвердил успешную production-отправку персонального сообщения в Telegram.
+
+### Персональные MAX-Сообщения Из Админки
+
+- Добавлена отдельная форма MAX для генераций с `source = max`, включая мобильный сайдбар, лимит 4000 символов и состояния отправки.
+- Исправлено разделение каналов: MAX-генерация с `chat_id` больше не определяется как Telegram.
+- Добавлена миграция `20260903_pr16_admin_max_recipient.sql` с защищенной RPC `admin_get_max_recipient`.
+- Добавлен безопасный n8n-шаблон `n8n/primerka-admin-max.importable.json`, который отправляет сообщение через `platform-api2.max.ru/messages`.
+- Добавлены `VITE_ADMIN_MAX_WEBHOOK_URL` в frontend env и GitHub Actions Secret mapping.
+- История MAX-сообщений, как и Telegram-сообщений, отдельно не сохраняется.
 
 ## 2026-06-16
 

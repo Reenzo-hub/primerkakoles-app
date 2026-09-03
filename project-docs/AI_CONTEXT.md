@@ -135,6 +135,7 @@ npm run preview
 - `VITE_WEBHOOK_URL`
 - `VITE_PAYMENT_WEBHOOK_URL`
 - `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`
+- `VITE_ADMIN_MAX_WEBHOOK_URL`
 - `VITE_EDGE_URL` - optional API/media proxy URL. Current production target: `https://api.primerkakoles.ru`.
 - `VITE_TELEGRAM_BOT_USERNAME` передается в GitHub Actions build, но по проверенному коду сейчас не используется.
 
@@ -164,6 +165,8 @@ npm run preview
 - `20260528_pr12_admin_dashboard_plan.sql` - добавляет поле `plan` в данные админ-панели.
 - `20260616_pr13_no_free_generations_signup.sql` - повторно закрепляет `generations_limit = 0` для новых web-регистраций и снимает неиспользованный стартовый баланс `1 из 1`.
 - `20260903_pr14_admin_telegram_recipient.sql` - разрешает только администраторам получать Telegram `chat_id` выбранного пользователя через защищенную RPC.
+- `20260903_pr15_admin_telegram_recipient_json.sql` - переводит результат Telegram RPC в `jsonb`, чтобы старый тип `users.chat_id` не вызывал ошибку PostgREST `400`.
+- `20260903_pr16_admin_max_recipient.sql` - разрешает администраторам серверно получать MAX user id из существующего `users.chat_id`.
 
 Критично при изменениях:
 
@@ -268,8 +271,26 @@ npm run preview
 
 Порядок включения в production:
 
-1. Выполнить `supabase/migrations/20260903_pr14_admin_telegram_recipient.sql` в Supabase SQL Editor.
+1. Для новой установки выполнить миграции по порядку. Если PR14 уже применена, достаточно выполнить `supabase/migrations/20260903_pr15_admin_telegram_recipient_json.sql` в Supabase SQL Editor.
 2. Импортировать `n8n/primerka-admin-telegram.importable.json`, заменить placeholder anon key и проверить credential `Telegram primerka` в Telegram node.
 3. Активировать workflow и скопировать его Production URL; стандартный путь оканчивается на `/webhook/admin-messages/telegram`.
 4. Создать GitHub Actions Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL` со скопированным Production URL и заново запустить deploy.
 5. Проверить успешную отправку от обоих администраторов и отказ для обычного аккаунта.
+
+### MAX
+
+- Форма MAX показывается только для генераций, у которых нормализованный `source` начинается с `max` или равен `макс`.
+- MAX user id хранится в текущей модели как `users.chat_id`; отдельная колонка на первом этапе не добавляется.
+- Frontend отправляет на `VITE_ADMIN_MAX_WEBHOOK_URL` только внутренний `user_id` и текст до 4000 символов вместе с Supabase access token администратора.
+- n8n вызывает `admin_get_max_recipient`, получает `max_user_id` после проверки администратора и отправляет `POST https://platform-api2.max.ru/messages?user_id=...`.
+- MAX bot token хранится только в n8n Code node и не входит в импортируемый JSON.
+- Шаблон: `n8n/primerka-admin-max.importable.json`.
+
+Порядок включения MAX в production:
+
+1. Выполнить `supabase/migrations/20260903_pr16_admin_max_recipient.sql` в Supabase SQL Editor.
+2. Импортировать `n8n/primerka-admin-max.importable.json`.
+3. В `Authorize and Resolve MAX Recipient` заменить `ВСТАВЬ_SUPABASE_ANON_KEY`, а в `Send MAX Message` заменить `ВСТАВЬ_MAX_BOT_TOKEN`.
+4. Активировать workflow и скопировать Production URL, оканчивающийся на `/webhook/admin-messages/max`.
+5. Создать GitHub Actions Secret `VITE_ADMIN_MAX_WEBHOOK_URL` с Production URL и заново запустить deploy.
+6. Проверить отправку с MAX-карточки и отказ обычному аккаунту.

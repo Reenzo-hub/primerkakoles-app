@@ -12,12 +12,13 @@
 - Cloudflare proxy для `app.primerkakoles.ru` признан неподходящим для production в РФ и оставлен как архивная/историческая попытка.
 - Web-покупка генераций через ЮKassa, n8n и Supabase `generation_orders` реализована и прошла production smoke-test.
 - В админку добавлена персональная отправка сообщений пользователям Telegram через защищенные Supabase RPC и n8n webhook.
+- Production-отправка персонального сообщения в Telegram успешно проверена пользователем.
+- Подготовлена персональная отправка сообщений пользователям MAX через существующий MAX user id и отдельный защищенный n8n webhook.
 
 ## Ближайший Приоритет
 
-- Применить миграцию `20260903_pr14_admin_telegram_recipient.sql`, импортировать и активировать `n8n/primerka-admin-telegram.importable.json`, добавить production webhook URL в GitHub Secret.
-- Провести production smoke-test Telegram-отправки от обоих администраторов и проверить отказ обычному пользователю.
-- После Telegram отдельно реализовать персональные сообщения пользователям MAX через их MAX user/chat id и credential MAX-бота.
+- Применить миграцию `20260903_pr16_admin_max_recipient.sql`, импортировать MAX workflow, добавить `VITE_ADMIN_MAX_WEBHOOK_URL` и провести production smoke-test.
+- Проверить отказ Telegram и MAX webhook для обычного пользователя без прав администратора.
 - Понаблюдать за скоростью баланса кабинета и галерей на реальных пользователях в РФ.
 - Решить, нужно ли позже проксировать через сервер также `/auth/v1/*`, если direct Supabase Auth будет тормозить в РФ.
 - Добавить явную и понятную обработку отсутствующих env-переменных.

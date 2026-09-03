@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout.jsx'
+import { sendAdminMaxMessage } from '../lib/adminMax.js'
 import { sendAdminTelegramMessage } from '../lib/adminTelegram.js'
 import { fetchEdgeJson, toMediaUrl } from '../lib/edgeApi.js'
 import { useAuth } from '../lib/useAuth.js'
@@ -41,6 +42,9 @@ export default function AdminPage() {
   const [telegramMessage, setTelegramMessage] = useState('')
   const [sendingTelegram, setSendingTelegram] = useState(false)
   const [telegramNotice, setTelegramNotice] = useState(null)
+  const [maxMessage, setMaxMessage] = useState('')
+  const [sendingMax, setSendingMax] = useState(false)
+  const [maxNotice, setMaxNotice] = useState(null)
 
   const isAdmin = ADMIN_EMAILS.includes((user?.email || '').toLowerCase())
 
@@ -172,6 +176,8 @@ export default function AdminPage() {
     setLimitError(null)
     setTelegramMessage('')
     setTelegramNotice(null)
+    setMaxMessage('')
+    setMaxNotice(null)
     setLimitDraft(
       selectedRow?.profile?.generations_limit == null
         ? ''
@@ -257,6 +263,38 @@ export default function AdminPage() {
       setTelegramNotice({ type: 'error', text: message })
     } finally {
       setSendingTelegram(false)
+    }
+  }
+
+  const handleSendMax = async () => {
+    if (!selectedRow?.profile?.id) return
+
+    const text = maxMessage.trim()
+    if (!text) {
+      setMaxNotice({ type: 'error', text: 'Введите сообщение' })
+      return
+    }
+
+    setSendingMax(true)
+    setMaxNotice(null)
+    try {
+      await sendAdminMaxMessage({
+        userId: selectedRow.profile.id,
+        message: text,
+      })
+      setMaxMessage('')
+      setMaxNotice({
+        type: 'success',
+        text: 'Сообщение отправлено в MAX',
+      })
+    } catch (err) {
+      const message =
+        err?.message === 'Failed to fetch'
+          ? 'Не удалось связаться с сервисом отправки'
+          : err?.message || 'Не удалось отправить сообщение'
+      setMaxNotice({ type: 'error', text: message })
+    } finally {
+      setSendingMax(false)
     }
   }
 
@@ -365,6 +403,12 @@ export default function AdminPage() {
               onSendTelegram={handleSendTelegram}
               sendingTelegram={sendingTelegram}
               telegramNotice={telegramNotice}
+              maxMessage={maxMessage}
+              setMaxMessage={setMaxMessage}
+              setMaxNotice={setMaxNotice}
+              onSendMax={handleSendMax}
+              sendingMax={sendingMax}
+              maxNotice={maxNotice}
             />
           </div>
         )}
@@ -407,6 +451,12 @@ export default function AdminPage() {
                 onSendTelegram={handleSendTelegram}
                 sendingTelegram={sendingTelegram}
                 telegramNotice={telegramNotice}
+                maxMessage={maxMessage}
+                setMaxMessage={setMaxMessage}
+                setMaxNotice={setMaxNotice}
+                onSendMax={handleSendMax}
+                sendingMax={sendingMax}
+                maxNotice={maxNotice}
               />
             </div>
           </div>
@@ -522,6 +572,12 @@ function AdminDetails({
   onSendTelegram,
   sendingTelegram,
   telegramNotice,
+  maxMessage,
+  setMaxMessage,
+  setMaxNotice,
+  onSendMax,
+  sendingMax,
+  maxNotice,
 }) {
   if (!row) {
     return (
@@ -565,57 +621,44 @@ function AdminDetails({
         <Detail label="user id" value={profile?.id || '—'} mono />
         <Detail label="email" value={profile?.email || '—'} />
         <Detail label="phone" value={profile?.phone || '—'} />
-        <UsernameDetail username={profile?.username} />
+        <UsernameDetail
+          username={profile?.username}
+          linkToTelegram={!isMaxGeneration(generation)}
+        />
         <Detail label="plan" value={profile?.plan || '—'} />
         <Detail label="updated" value={formatDateTime(profile?.updated_at)} />
       </DetailBlock>
 
       {isTelegramGeneration(generation) && (
-        <DetailBlock title="Сообщение в Telegram">
-          {profile?.chat_id ? (
-            <div>
-              <textarea
-                value={telegramMessage}
-                onChange={(event) => {
-                  setTelegramMessage(event.target.value)
-                  setTelegramNotice(null)
-                }}
-                maxLength={4096}
-                rows={5}
-                placeholder="Введите персональное сообщение"
-                className="w-full resize-y rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-sky-400/60"
-              />
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span className="text-xs text-neutral-500">
-                  {telegramMessage.length}/4096
-                </span>
-                <button
-                  type="button"
-                  onClick={onSendTelegram}
-                  disabled={sendingTelegram || !telegramMessage.trim()}
-                  className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400"
-                >
-                  {sendingTelegram ? 'Отправляем...' : 'Отправить'}
-                </button>
-              </div>
-              {telegramNotice && (
-                <p
-                  className={`mt-3 rounded-xl border p-3 text-xs ${
-                    telegramNotice.type === 'success'
-                      ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100'
-                      : 'border-red-400/20 bg-red-500/10 text-red-200'
-                  }`}
-                >
-                  {telegramNotice.text}
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-500">
-              У пользователя нет Telegram chat_id.
-            </p>
-          )}
-        </DetailBlock>
+        <AdminMessageComposer
+          title="Сообщение в Telegram"
+          channel="Telegram"
+          hasRecipient={Boolean(profile?.chat_id)}
+          message={telegramMessage}
+          setMessage={setTelegramMessage}
+          setNotice={setTelegramNotice}
+          onSend={onSendTelegram}
+          sending={sendingTelegram}
+          notice={telegramNotice}
+          maxLength={4096}
+          buttonClassName="bg-sky-500 hover:bg-sky-400"
+        />
+      )}
+
+      {isMaxGeneration(generation) && (
+        <AdminMessageComposer
+          title="Сообщение в MAX"
+          channel="MAX"
+          hasRecipient={Boolean(profile?.chat_id)}
+          message={maxMessage}
+          setMessage={setMaxMessage}
+          setNotice={setMaxNotice}
+          onSend={onSendMax}
+          sending={sendingMax}
+          notice={maxNotice}
+          maxLength={4000}
+          buttonClassName="bg-violet-500 hover:bg-violet-400"
+        />
       )}
 
       <DetailBlock title="Лимиты">
@@ -686,9 +729,73 @@ function AdminDetails({
   )
 }
 
-function UsernameDetail({ username }) {
+function AdminMessageComposer({
+  title,
+  channel,
+  hasRecipient,
+  message,
+  setMessage,
+  setNotice,
+  onSend,
+  sending,
+  notice,
+  maxLength,
+  buttonClassName,
+}) {
+  return (
+    <DetailBlock title={title}>
+      {hasRecipient ? (
+        <div>
+          <textarea
+            value={message}
+            onChange={(event) => {
+              setMessage(event.target.value)
+              setNotice(null)
+            }}
+            maxLength={maxLength}
+            rows={5}
+            placeholder="Введите персональное сообщение"
+            aria-label={`Сообщение в ${channel}`}
+            className="w-full resize-y rounded-xl border border-white/10 bg-neutral-950/70 px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-sky-400/60"
+          />
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-xs text-neutral-500">
+              {message.length}/{maxLength}
+            </span>
+            <button
+              type="button"
+              onClick={onSend}
+              disabled={sending || !message.trim()}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-neutral-700 disabled:text-neutral-400 ${buttonClassName}`}
+            >
+              {sending ? 'Отправляем...' : 'Отправить'}
+            </button>
+          </div>
+          {notice && (
+            <p
+              className={`mt-3 rounded-xl border p-3 text-xs ${
+                notice.type === 'success'
+                  ? 'border-emerald-400/20 bg-emerald-500/10 text-emerald-100'
+                  : 'border-red-400/20 bg-red-500/10 text-red-200'
+              }`}
+            >
+              {notice.text}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-neutral-500">
+          У пользователя нет идентификатора {channel}.
+        </p>
+      )}
+    </DetailBlock>
+  )
+}
+
+function UsernameDetail({ username, linkToTelegram = true }) {
   const clean = username ? String(username).replace(/^@/, '') : ''
   if (!clean) return <Detail label="username" value="—" />
+  if (!linkToTelegram) return <Detail label="username" value={`@${clean}`} />
   return (
     <div className="min-w-0 text-xs">
       <div className="text-neutral-500">username</div>
@@ -811,10 +918,21 @@ function getDisplayName(profile) {
 }
 
 function isTelegramGeneration(generation) {
-  return (
-    String(generation?.source || '').toLowerCase() === 'telegram' ||
-    generation?.chat_id != null
-  )
+  const source = normalizeSource(generation?.source)
+  if (isMaxSource(source)) return false
+  return source === 'tg' || source.startsWith('telegram') || (!source && generation?.chat_id != null)
+}
+
+function isMaxGeneration(generation) {
+  return isMaxSource(normalizeSource(generation?.source))
+}
+
+function isMaxSource(source) {
+  return source.startsWith('max') || source === 'макс'
+}
+
+function normalizeSource(source) {
+  return String(source || '').trim().toLowerCase()
 }
 
 function formatDateTime(iso) {

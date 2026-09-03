@@ -1,22 +1,11 @@
--- PR 14: securely resolve a Telegram recipient for an admin message.
---
--- The n8n webhook calls this RPC with the administrator's Supabase JWT. The
--- browser never sends chat_id and the function returns it only to an admin.
+-- PR 15: make the admin Telegram recipient RPC independent of legacy column
+-- types. Some installations have users.chat_id as bigint/numeric/text.
 
 begin;
 
-create or replace function public.is_admin_user()
-returns boolean
-language sql
-stable
-as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) in (
-    'naydikolesa@yandex.ru',
-    'renatio@mail.ru'
-  );
-$$;
+drop function if exists public.admin_get_telegram_recipient(uuid);
 
-create or replace function public.admin_get_telegram_recipient(p_user_id uuid)
+create function public.admin_get_telegram_recipient(p_user_id uuid)
 returns jsonb
 language plpgsql
 security definer
