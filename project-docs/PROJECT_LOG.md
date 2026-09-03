@@ -15,6 +15,7 @@
 - История сообщений отдельно не сохраняется; это принятое ограничение первого этапа.
 - Актуальные локальные экспорты `n8n/Primerka-cloud*.json` исключены из Git, поскольку могут содержать реальные токены.
 - GitHub Pages build получает URL нового webhook из GitHub Secret `VITE_ADMIN_TELEGRAM_WEBHOOK_URL`.
+- Исправлена обработка ошибок отправки: frontend учитывает внутренние `statusCode` и `ready`, а HTTP Response Code n8n задается в `Respond to Webhook -> Options`.
 
 ## 2026-06-16
 

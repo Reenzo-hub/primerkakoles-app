@@ -32,7 +32,13 @@ export async function sendAdminTelegramMessage({ userId, message }) {
   })
 
   const payload = await response.json().catch(() => null)
-  if (!response.ok || payload?.ok === false) {
+  const workflowStatus = Number(payload?.statusCode || 0)
+  if (
+    !response.ok ||
+    workflowStatus >= 400 ||
+    payload?.ok === false ||
+    payload?.ready === false
+  ) {
     throw new Error(
       payload?.error || `Не удалось отправить сообщение. Код: ${response.status}`,
     )
